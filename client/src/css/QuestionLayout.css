@@ -1,0 +1,70 @@
+.question-container {
+  position: relative;
+  padding: 2rem;
+  padding-top: 3rem;
+  text-align: center;
+}
+
+.question-box {
+  position: relative;
+  flex: 1;
+  background: white;
+  margin: 2rem auto 1rem auto; /* 👈 top: 2rem, bottom: 1rem */
+  padding: 2rem;
+  padding-top: 3rem;
+
+  width: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  text-align: center;
+  min-height: 60vh;
+  min-width: 205px;
+}
+
+.back-btn {
+  position: absolute; /* ✅ Add this */
+  top: 1rem;
+  left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 1rem;
+  color: #333;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.back-btn:hover .back-text {
+  color: #240d75;
+  text-decoration: underline;
+}
+
+.arrow {
+  text-decoration: none;
+}
+
+.back-text {
+  text-decoration: underline;
+}
+
+.continue-btn {
+  width: 30%;
+  min-width: 160px; /* 👈 ensures it's wide enough on small screens */
+  padding: 1rem;
+  margin: 1rem auto;
+  font-size: 1.1rem;
+  background: linear-gradient(to right, rgb(85, 77, 77), #000000);
+  color: white;
+  border: none;
+  border-top: 1px solid #ddd;
+  cursor: pointer;
+  border-radius: 8px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center; /* fallback for non-flex environments */
+}
