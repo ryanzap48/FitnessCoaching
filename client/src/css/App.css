@@ -3,11 +3,16 @@ html, body, #root {
   padding: 0;
   height: 100%;
   scroll-behavior: smooth;
+  
 }
 
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  -ms-overflow-style: none;
 
+}
+::-webkit-scrollbar {
+    display: none;
 }

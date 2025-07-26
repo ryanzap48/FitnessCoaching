@@ -1,23 +1,14 @@
 import { useEffect, useState } from 'react';
+import { FaSearch } from 'react-icons/fa';
 
 export default function AdminConsultationList() {
   const [consultations, setConsultations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchConsultations = async () => {
-    try {
-      const res = await fetch('http://localhost:9000/consultations');
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || 'Failed to fetch consultations');
-
-      setConsultations(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const res = await fetch('http://localhost:9000/consultations');
+    const data = await res.json();
+    setConsultations(data);
   };
 
   const handleDelete = async (id) => {
@@ -31,18 +22,45 @@ export default function AdminConsultationList() {
     fetchConsultations();
   }, []);
 
+
+   const filteredConsultations = consultations.filter(consultation => 
+        consultation.firstName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
   return (
     <div style={containerStyle}>
-      <h2 style={headerStyle}>Consultation Requests</h2>
+      <div style={{
+              position: 'relative',
+              width: '200px',
+              marginBottom: '1rem'
+            }}>
+          <FaSearch style={{
+                      position: 'absolute',
+                      left: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#999'
+                    }}/>
+          <input
+              type="text"
+              placeholder="Search consultation"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                  width: '100%',
+                  padding: '8px 10px 8px 35px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+              }}
+          />
+        </div>
 
-      {loading && <p>Loading consultations...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      {!loading && consultations.length === 0 && (
+      
+      {filteredConsultations.length === 0 ? (
         <p style={emptyStyle}>No consultations submitted yet.</p>
-      )}
-
-      {!loading && consultations.length > 0 && (
+      ) : (
         <div style={tableWrapperStyle}>
           <table style={tableStyle}>
             <thead style={{ backgroundColor: '#f5f5f5' }}>
@@ -55,7 +73,7 @@ export default function AdminConsultationList() {
               </tr>
             </thead>
             <tbody>
-              {consultations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((consult) => (
+              {filteredConsultations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((consult) => (
                 <>
                   <tr key={consult._id} style={rowStyle}>
                     <td style={tdStyle}>{consult.firstName}</td>
@@ -85,15 +103,8 @@ export default function AdminConsultationList() {
 }
 
 const containerStyle = {
-  padding: '2rem',
-  maxWidth: '1000px',
+  padding: '1.5rem',
   margin: 'auto',
-};
-
-const headerStyle = {
-  textAlign: 'center',
-  marginBottom: '2rem',
-  fontSize: '1.5rem'
 };
 
 const emptyStyle = {
@@ -115,9 +126,9 @@ const tableStyle = {
 const thStyle = {
   padding: '1rem',
   textAlign: 'left',
-  fontWeight: 'bold',
-  borderBottom: '2px solid #ccc',
-  fontSize: '1rem',
+  borderBottom: '1px solid #ccc',
+  fontSize: '0.9rem',
+  backgroundColor: 'white'
 };
 
 const tdStyle = {

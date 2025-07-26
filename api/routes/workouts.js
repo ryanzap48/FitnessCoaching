@@ -8,7 +8,6 @@ const authenticateToken = require('../middleware/authenticateToken');
 router.post('/create', async (req, res) => {
   const { title, duration, equipment, blocks, userEmails=[] } = req.body;
 
-
   let assignedTo = []
 
   if (userEmails.length > 0) {
@@ -50,7 +49,11 @@ router.delete('/:id', async (req, res) => {
 // Get a specific workout
 router.get('/:id', authenticateToken, async (req, res) => {
   const workout = await Workout.findById(req.params.id)
-    .populate('assignedTo', 'firstName lastName email');
+    .populate('assignedTo', 'firstName lastName email')
+    .populate({
+      path: 'blocks.exercises.exercise', // deep populate
+      model: 'Exercise', // make sure this matches your model name
+    });
   res.json(workout);
 });
 

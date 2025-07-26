@@ -16,7 +16,7 @@ export default function UserDashboard() {
         const workoutData = await workoutRes.json();
         setWorkouts(workoutData);
 
-        const nutritionRes = await fetch('http://localhost:9000/nutrition/my', {
+        const nutritionRes = await fetch('http://localhost:9000/mealplans/my', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const nutritionData = await nutritionRes.json();

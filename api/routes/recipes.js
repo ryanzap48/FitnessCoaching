@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Recipe = require('../models/Recipe');
-const User = require('../models/User');
 const authenticateToken = require('../middleware/authenticateToken');
 
 // create recipe and assign to multipe user (can assign to no users)
@@ -19,17 +18,9 @@ router.post('/create', async (req, res) => {
         servings,
         ingredients,
         instructions,
+        isDraft,
         imageUrl,
-        userEmails = [], // Default to empty array if not provided
     } = req.body;
-
-
-     let assignedTo = [];
-
-    if (userEmails.length > 0) {
-        const users = await User.find({ email: { $in: userEmails } });
-        assignedTo = users.map((u) => u._id);
-    }
 
     const newRecipe = new Recipe({
         name,
@@ -44,29 +35,98 @@ router.post('/create', async (req, res) => {
         servings,
         ingredients,
         instructions,
+        isDraft,
         imageUrl,
-        assignedTo, // will be empty if no users found
     });
-
-
     await newRecipe.save();
     res.status(201).json({ recipe: newRecipe });
 });
 
-// get recipes assigned ot logged-in user
-router.get('/my', authenticateToken, async (req, res) => {
-    const recipes = await Recipe.find( {assignedTo: req.user.id});
-    res.json(recipes);
-})
+
+// Update recipe
+router.put('/:id', async (req, res) => {
+    try {
+        const { 
+            name,
+            description,
+            calories,
+            protein,
+            carbs,
+            fats,
+            category,
+            foodClass,
+            estimatedTime,
+            servings,
+            ingredients,
+            instructions,
+            isDraft,
+            imageUrl,
+        } = req.body;
 
 
-// get all recipes (admin view)
+        const updateData = {
+            description,
+            calories,
+            protein,
+            carbs,
+            fats,
+            category,
+            foodClass,
+            estimatedTime,
+            servings,
+            ingredients,
+            instructions,
+            isDraft,
+            imageUrl,
+        };
+
+        const updated = await Recipe.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ message: 'Recipe not found' });
+        }
+
+        
+        res.json(updated);
+    } catch (err) {
+        console.error('Error updating recipe:', err);
+        res.status(500).json({ message: 'Error updating recipe', error: err.message });
+    }
+});
+
+
 router.get('/', async (req, res) => {
     const recipes = await Recipe.find()
-        .populate('assignedTo', 'firstName lastName email')
-        .sort({ createdAt: -1 });
+        .sort({ updatedAt: -1 });
     res.json(recipes);
 });
+
+// Convert to draft with assignment check
+router.patch('/:id/convert-to-draft', async (req, res) => {
+    try {
+        const recipe = await Recipe.findById(req.params.id);
+        
+        if (!recipe) {
+            return res.status(404).json({ message: 'Recipe not found' });
+        }
+
+        const updated = await Recipe.findByIdAndUpdate(
+            req.params.id,
+            { isDraft: true },
+            { new: true }
+        );
+        
+        res.json(updated);
+    } catch (err) {
+        console.error('Error converting to draft:', err);
+        res.status(500).json({ message: 'Error converting to draft', error: err.message });
+    }
+});
+
 
 // delete a recipe
 router.delete('/:id', async (req, res) => {
@@ -77,39 +137,42 @@ router.delete('/:id', async (req, res) => {
 // get specific recipe
 router.get('/:id', authenticateToken, async (req, res) => {
     const recipe = await Recipe.findById( req.params.id )
-        .populate('assignedTo', 'firstName lastName email');
     res.json(recipe);    
 });
 
-// add additional users to a recipe
-router.patch('/:id/assign', async (req, res) => {
-    const { userEmail } = req.body;
-    const user = await User.findOne({ email: userEmail });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const recipe = await Recipe.findByIdAndUpdate(
-        req.params.id,
-        { $addToSet: { assignedTo: user._id }},
-        { new: true }   
-    ).populate('assignedTo', 'firstName lastName email');
-
-    res.json(recipe)
+router.post('/by-ids', async (req, res) => {
+    const { ids } = req.body;
+    const recipes = await Recipe.find({ _id: { $in: ids } });
+    res.json(recipes);
 });
 
-// remove a user to a recipe
-router.patch('/:id/unassign', async (req, res) => {
-    const { userEmail } = req.body;
-    const user = await User.findOne({ email: userEmail });
-    
-    const recipe = await Recipe.findByIdAndUpdate(
-        req.params.id,
-        { $pull: { assignedTo: user._id }},
-        { new: true }   
-    ).populate('assignedTo', 'firstName lastName email');
+// validate recipe names and return their IDs or not found names
+router.post('/validate-names', async (req, res) => {
+    const { names } = req.body; // array of recipe names to validate
 
-    res.json(recipe)
+
+    // Find recipes whose name matches any in the names array (case-insensitive)
+    const foundRecipes = await Recipe.find({
+        name: { $in: names.map(n => new RegExp(`^${n.trim()}$`, 'i')) }
+    });
+
+    const foundNames = foundRecipes.map(r => r.name.toLowerCase());
+    const notFoundNames = names.filter(
+        n => !foundNames.includes(n.trim().toLowerCase())
+    );
+
+    res.json({
+        foundRecipes: foundRecipes.map(r => ({
+            id: r._id,
+            name: r.name,
+            calories: r.calories,
+            protein: r.protein,
+            carbs: r.carbs,
+            fats: r.fats,
+            imageUrl: r.imageUrl,
+        })),
+        notFoundNames,
+    });
 });
-
-
 
 module.exports = router;

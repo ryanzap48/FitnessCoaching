@@ -1,21 +1,24 @@
 const mongoose = require('mongoose');
 
 const ExerciseSchema = new mongoose.Schema({
-  name: String,
+  exercise: { type: mongoose.Schema.Types.ObjectId, ref: 'Exercise' },
   sets: String,
-  imageUrl: String,
+  reps: String,
+  rest: String,
   notes: String,
 });
 
 const BlockSchema = new mongoose.Schema({
-  type: { type: String, enum: ['regular', 'superset'], default: 'regular' },
+  scheduledDate: { 
+    type: Date,
+    required: true 
+  },
   exercises: [ExerciseSchema],
 });
 
 const Workout = new mongoose.Schema({
   title: String,
   duration: String,
-  equipment: [String],
   blocks: [BlockSchema],
   assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });

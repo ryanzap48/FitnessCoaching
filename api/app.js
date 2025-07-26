@@ -15,6 +15,10 @@ var adminRouter = require('./routes/admin');
 var workoutRouter = require('./routes/workouts');
 var consultationsRoute = require('./routes/consultations');
 var recipeRouter = require('./routes/recipes');
+var mealPlanRouter = require('./routes/mealPlans');
+var exerciseRouter = require('./routes/exercises');
+
+var aiGenerateRouter = require('./routes/aiGenerate');
 
 var app = express();
 app.set('view engine', 'ejs');
@@ -34,6 +38,10 @@ app.use('/admin', adminRouter);
 app.use('/workouts', workoutRouter);
 app.use('/consultations', consultationsRoute);
 app.use('/recipes', recipeRouter);
+app.use('/mealplans', mealPlanRouter);
+app.use('/exercises', exerciseRouter);
+app.use('/aigenerate', aiGenerateRouter);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

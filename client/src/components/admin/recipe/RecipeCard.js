@@ -1,23 +1,42 @@
-import editButton from '../../../assets/edit-button.png';
 import deleteButton from '../../../assets/bin.png';
+import draftButton from '../../../assets/edit-button.png';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+
 
 const RecipeCard = ({ 
   recipe, 
   onCardClick, 
-  onEdit, 
   onDelete,
-  showEditButton = true,
-  showDeleteButton = true,
-  customActions = null // For additional actions like "Add to Meal Plan"
+  showDeleteButton,
+  onSwitch,
+  onSwitchPrev,
+  recipes = [],
+  currentIndex = 0,
+  day,
+  category,
+  onConvertToDraft
 }) => {
+  
+  const cycleToNextRecipe = (day, category) => {
+    if (onSwitch) {
+      onSwitch(day, category);
+    }
+  };
+
+  const cycleToPrevRecipe = (day, category) => {
+    if (onSwitchPrev) {
+      onSwitchPrev(day, category);
+    }
+  };
+
   return (
     <div
       style={{
         position: 'relative',
         display: 'flex',
         border: '1px solid #ccc',
-        width: '350px',
-        height: '400px',
+        width: '320px',
+        height: '420px',
         cursor: 'pointer',
         flexDirection: 'column',
         borderRadius: '8px',
@@ -27,24 +46,92 @@ const RecipeCard = ({
       }}
       onClick={() => onCardClick(recipe)}
     >
-      {showEditButton && (
-        <img
-          src={editButton}
-          alt='edit'
-          style={{ 
-            position: 'absolute', 
-            top: '8px', 
-            right: '8px', 
-            width: '20px', 
-            cursor: 'pointer' 
+      {/* Switch Button - Top Left */}
+      {onSwitch && (
+        <>
+        <button
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent card click
+            cycleToNextRecipe(day, category);
           }}
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onEdit(recipe); 
+          disabled={recipes.length <= 1}
+          style={{
+            position: 'absolute',
+            top: '5px',
+            right: '8px', // Changed from right to left
+            width: '30px',
+            height: '30px',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            cursor: recipes.length > 1 ? 'pointer' : 'not-allowed',
+            fontSize: '20px',
+            display: 'flex',
+            border: 'none',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: recipes.length > 1 ? 1 : 0.5,
+            transition: 'all 0.2s ease',
+            zIndex: 10
           }}
-        />
+          title={recipes.length > 1 ? `Switch recipe (${currentIndex + 1} of ${recipes.length})` : 'Only one recipe available'}
+          onMouseEnter={(e) => {
+            if (recipes.length > 1) {
+              e.target.style.transform = 'scale(1.1)';
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (recipes.length > 1) {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+            }
+          }}
+        >
+          <FiChevronRight /> 
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent card click
+            cycleToPrevRecipe(day, category);
+          }}
+          disabled={recipes.length <= 1}
+          style={{
+            position: 'absolute',
+            top: '5px',
+            left: '8px', // Changed from right to left
+            width: '30px',
+            height: '30px',
+            backgroundColor: 'rgba(255, 255, 255)',
+            cursor: recipes.length > 1 ? 'pointer' : 'not-allowed',
+            fontSize: '20px',
+            display: 'flex',
+            border: 'none',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: recipes.length > 1 ? 1 : 0.5,
+            transition: 'all 0.2s ease',
+            zIndex: 10
+          }}
+          title={recipes.length > 1 ? `Switch recipe (${currentIndex + 1} of ${recipes.length})` : 'Only one recipe available'}
+          onMouseEnter={(e) => {
+            if (recipes.length > 1) {
+              e.target.style.transform = 'scale(1.1)';
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (recipes.length > 1) {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+            }
+          }}
+        >
+          <FiChevronLeft />
+        </button>
+        </>
       )}
-     
+
+      {/* Your existing content - removed empty div */}
+  
       <div style={{ 
         display: 'flex', 
         gap: '40px', 
@@ -59,8 +146,8 @@ const RecipeCard = ({
         src={recipe.imageUrl}
         alt='recipe'
         style={{ 
-          width: '340px', 
-          height: '280px', 
+          width: '300px', 
+          height: '300px', 
           cursor: 'pointer', 
           borderRadius: '8px' 
         }}
@@ -88,17 +175,7 @@ const RecipeCard = ({
         <h4 style={{ margin: 0, fontWeight: '100' }}>F{recipe.fats} g</h4>
       </div>
 
-      {/* Custom Actions (like Add to Meal Plan button) */}
-      {customActions && (
-        <div style={{ 
-          position: 'absolute', 
-          bottom: '40px', 
-          right: '8px' 
-        }}>
-          {customActions}
-        </div>
-      )}
-
+      {/* Delete Button - Bottom Right */}
       {showDeleteButton && (
         <img
           src={deleteButton}
@@ -116,6 +193,24 @@ const RecipeCard = ({
           }}
         />
       )}
+      <img
+          src={draftButton}
+          alt='convert to draft'
+          style={{ 
+              position: 'absolute', 
+              top: '8px', 
+              right: '8px', 
+              width: '20px', 
+              cursor: recipe.isDraft ? 'not-allowed' : 'pointer',
+              opacity: recipe.isDraft ? 0.5 : 1,
+              filter: recipe.isDraft ? 'grayscale(100%)' : 'none'
+          }}
+          onClick={(e) => { 
+              if (recipe.isDraft) return; // Prevent action if already draft
+              e.stopPropagation(); 
+              onConvertToDraft(recipe._id);
+          }}
+          />
     </div>
   );
 };

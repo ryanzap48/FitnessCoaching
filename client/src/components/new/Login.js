@@ -29,7 +29,9 @@ export default function Login() {
     if (res.ok) {
       console.log('User role:', data?.user?.role);  // Optional chaining for safety
       login(data.token, data.user.role);
-      window.location.href = '/';
+      if(data.user.role === 'admin') window.location.href = '/adminuserlist';
+      else window.location.href = '/';
+
     } else {
       console.warn('Login failed:', data.message);
       setError(data.message || 'Login failed.');
@@ -47,6 +49,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
             type="email"
+            id="email"
             name="email"
             placeholder="Email"
             value={formData.email}
@@ -57,6 +60,7 @@ export default function Login() {
             <input
               type={showPassword ? 'text' : 'password'}
               name="password"
+              id="password"
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
@@ -72,7 +76,7 @@ export default function Login() {
             }}>
               {error}
             </div>
-          <button type="submit" style={styles.button}>Login</button>
+          <button type="submit" id='login-button' style={styles.button}>Login</button>
 
           {/* New User Button */}
             <a href="/question0" style={styles.secondaryButton}>

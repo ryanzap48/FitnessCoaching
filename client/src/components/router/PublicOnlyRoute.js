@@ -5,7 +5,10 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function PublicOnlyRoute({ children }) {
   const { isAuthenticated, role } = useAuth();
 
-  if (isAuthenticated && (role === 'user' || role === 'admin')) {
+  if (isAuthenticated && role === 'admin') {
+    return <Navigate to="/adminuserlist" replace />;
+  }
+  if (isAuthenticated && role === 'user') {
     return <Navigate to="/dashboard" replace />;
   }
 

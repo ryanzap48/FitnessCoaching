@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { FaSearch } from 'react-icons/fa';
 
 export default function AdminUserList() {
   const [users, setUsers] = useState([]);
-
+  const [searchTerm, setSearchTerm] = useState('');
   const fetchUsers = async () => {
     const res = await fetch('http://localhost:9000/users');
     const data = await res.json();
@@ -20,11 +21,42 @@ export default function AdminUserList() {
     fetchUsers();
   }, []);
 
+  const filteredUsers = users.filter(user => 
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+
   return (
     <div style={containerStyle}>
-      <h2 style={headerStyle}>All Users</h2>
+      <div style={{
+              position: 'relative',
+              width: '200px',
+              marginBottom: '1rem'
+            }}>
+          <FaSearch style={{
+                      position: 'absolute',
+                      left: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#999'
+                    }}/>
+          <input
+              type="text"
+              placeholder="Search client"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                  width: '100%',
+                  padding: '8px 10px 8px 35px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+              }}
+          />
+        </div>
 
-      {users.length === 0 ? (
+      {filteredUsers.length === 0 ? (
         <p style={emptyStyle}>No users found.</p>
       ) : (
         <div style={tableWrapperStyle}>
@@ -38,7 +70,7 @@ export default function AdminUserList() {
               </tr>
             </thead>
             <tbody>
-              {users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(user => (
+              {filteredUsers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(user => (
                 <tr key={user._id} style={rowStyle}>
                   <td style={tdStyle}>{user.firstName} {user.lastName}</td>
                   <td style={tdStyle}>{user.email}</td>
@@ -62,15 +94,8 @@ export default function AdminUserList() {
 }
 
 const containerStyle = {
-  padding: '2rem',
-  maxWidth: '1000px',
+  padding: '1.5rem',
   margin: 'auto',
-};
-
-const headerStyle = {
-  textAlign: 'center',
-  marginBottom: '2rem',
-  fontSize: '1.5rem'
 };
 
 const emptyStyle = {
@@ -92,9 +117,9 @@ const tableStyle = {
 const thStyle = {
   padding: '1rem',
   textAlign: 'left',
-  fontWeight: 'bold',
-  borderBottom: '2px solid #ccc',
-  fontSize: '1rem',
+  borderBottom: '1px solid #ccc',
+  fontSize: '0.9rem',
+  backgroundColor: 'white'
 };
 
 const tdStyle = {

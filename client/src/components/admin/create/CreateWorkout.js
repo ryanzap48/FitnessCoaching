@@ -1,20 +1,86 @@
-import React, { useState } from 'react';
-import exerciseImageMap from '../../../image-mapping/exerciseImageMap';
+import { useState } from 'react';
+import { debounce } from 'lodash';
 
 export default function CreateWorkout() {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
-  const [equipment, setEquipment] = useState([]);
   const [userEmailInput, setUserEmailInput] = useState(''); // comma-separated string
   const [blocks, setBlocks] = useState([]);
   const [message, setMessage] = useState('');
 
-  const handleAddBlock = () => {
-    setBlocks(prev => [
-      ...prev,
-      { type: 'regular', exercises: [{ name: '', sets: '', imageUrl: '', notes: '' }] }
-    ]);
+
+  const debouncedValidate = debounce(async (blockIdx, exIdx, exerciseName) => {
+    if (!exerciseName.trim()) {
+      // Clear validation when input is empty
+      updateExercise(blockIdx, exIdx, { 
+        validationError: '', 
+        exerciseId: '' 
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:9000/exercises/validate-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: [exerciseName] })
+      });
+
+      const data = await response.json();
+
+      if (data.notFoundNames.length > 0) {
+        // Exercise not found
+        updateExercise(blockIdx, exIdx, {
+          validationError: `Exercise not found`,
+          exerciseId: ''
+        });
+      } else {
+        // Exercise found
+        const foundExercise = data.foundExercises[0];
+        updateExercise(blockIdx, exIdx, {
+          validationError: '',
+          exerciseId: foundExercise.id
+        });
+      }
+    } catch (error) {
+      console.error('Error validating exercise name:', error);
+      updateExercise(blockIdx, exIdx, {
+        validationError: 'Error validating exercise',
+        exerciseId: ''
+      });
+    }
+  }, 250);
+
+
+  // Helper function to update a specific exercise
+  const updateExercise = (blockIdx, exIdx, updates) => {
+    setBlocks(prev => {
+      const newBlocks = [...prev];
+      newBlocks[blockIdx].exercises[exIdx] = {
+        ...newBlocks[blockIdx].exercises[exIdx],
+        ...updates
+      };
+      return newBlocks;
+    });
   };
+
+  const handleAddBlock = () => {
+  setBlocks(prev => [
+    ...prev,
+    { 
+      scheduledDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+      exercises: [{ 
+        name: '', 
+        sets: '', 
+        reps: '', 
+        rest: '', 
+        notes: '',
+        validationError: '',
+        exerciseId: ''
+      }] 
+    }
+  ]);
+};
 
   const handleBlockChange = (index, field, value) => {
     const newBlocks = [...blocks];
@@ -23,53 +89,80 @@ export default function CreateWorkout() {
   };
 
   const handleExerciseChange = (blockIdx, exIdx, field, value) => {
-    const newBlocks = [...blocks];
-    const exercise = newBlocks[blockIdx].exercises[exIdx];
-    exercise[field] = value;
-
+    const updates = { [field]: value };
+    
+    // If changing the name, trigger validation
     if (field === 'name') {
-      const normalizedName = value.trim().toLowerCase();
-      const mappedImage = exerciseImageMap[normalizedName];
-      if (mappedImage && !exercise.imageUrl) {
-        exercise.imageUrl = mappedImage;
-      }
+      debouncedValidate(blockIdx, exIdx, value);
     }
-
-    setBlocks(newBlocks);
+    
+    updateExercise(blockIdx, exIdx, updates);
   };
 
   const handleAddExercise = (blockIdx) => {
     const newBlocks = [...blocks];
-    newBlocks[blockIdx].exercises.push({ name: '', sets: '', imageUrl: '', notes: '' });
+    newBlocks[blockIdx].exercises.push({ 
+      name: '', 
+      sets: '', 
+      reps: '', 
+      rest: '', 
+      notes: '',
+      validationError: '',
+      exerciseId: ''
+    });
     setBlocks(newBlocks);
   };
 
   const handleDeleteExercise = (blockIdx, exIdx) => {
     const newBlocks = [...blocks];
     newBlocks[blockIdx].exercises.splice(exIdx, 1);
+    
+    // If no exercises left in block, remove the entire block
     if (newBlocks[blockIdx].exercises.length === 0) {
       newBlocks.splice(blockIdx, 1);
     }
+    
     setBlocks(newBlocks);
-  };
-
-  const toggleEquipment = (item) => {
-    setEquipment(prev =>
-      prev.includes(item) ? prev.filter(e => e !== item) : [...prev, item]
-    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
 
-    // Split the comma-separated string into an array of trimmed emails
+    // Check for validation errors
+    const hasValidationErrors = blocks.some(block => 
+      block.exercises.some(exercise => 
+        exercise.validationError && exercise.validationError.trim() !== ''
+      )
+    );
+
+    if (hasValidationErrors) {
+      setMessage('❌ Please fix exercise name validation errors before submitting.');
+      return;
+    }
+
+    // Parse user emails
     const userEmails = userEmailInput
       .split(',')
       .map(email => email.trim())
       .filter(email => email !== '');
 
-    const workoutData = { title, duration, equipment, blocks, userEmails };
+    // Prepare workout data - clean up the exercise objects for submission
+    const workoutData = { 
+      title, 
+      duration, 
+      blocks: blocks.map(block => ({
+        scheduledDate: new Date(block.scheduledDate),
+        exercises: block.exercises.map(exercise => ({
+          exercise: exercise.exerciseId || null,  // ✅ Correct field name
+          sets: exercise.sets,
+          reps: exercise.reps,
+          rest: exercise.rest,
+          notes: exercise.notes
+        }))
+      })), 
+      userEmails 
+    };
 
     try {
       const res = await fetch('http://localhost:9000/workouts/create', {
@@ -81,10 +174,9 @@ export default function CreateWorkout() {
       const data = await res.json();
       if (res.ok) {
         setMessage('✅ Workout created successfully!');
-        // Optionally clear the form:
+        // Clear the form
         setTitle('');
         setDuration('');
-        setEquipment([]);
         setUserEmailInput('');
         setBlocks([]);
       } else {
@@ -98,36 +190,40 @@ export default function CreateWorkout() {
 
   const styles = {
     form: {
-      maxWidth: '800px',
-      margin: '2rem auto',
-      padding: '2rem',
-      background: '#f8f9fa',
-      borderRadius: '10px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'sans-serif',
     },
     input: {
-      width: '100%',
+      width: '97%',
       padding: '0.75rem',
       marginBottom: '1rem',
       borderRadius: '6px',
       border: '1px solid #ccc',
+  },
+    inputError: {
+      width: '100%',
+      padding: '0.75rem',
+      marginBottom: '0.5rem',
+      borderRadius: '6px',
+      border: '2px solid #dc3545',
       fontSize: '1rem',
       boxSizing: 'border-box',
     },
-    sectionTitle: {
-      margin: '2rem 0 1rem',
-      fontSize: '1.25rem',
-      fontWeight: 'bold',
+    validationError: {
+      color: '#dc3545',
+      fontSize: '0.875rem',
+      marginBottom: '1rem',
+      fontWeight: '500',
     },
     button: {
-      padding: '0.6rem 1.2rem',
-      fontSize: '1rem',
-      borderRadius: '6px',
-      border: 'none',
-      cursor: 'pointer',
-      marginRight: '0.5rem',
-      marginBottom: '0.5rem',
+        border: 'none',
+        borderRadius: '4px',
+        padding: '9px 20px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        fontSize: '14px'
     },
     deleteButton: {
       backgroundColor: '#dc3545',
@@ -139,16 +235,6 @@ export default function CreateWorkout() {
       cursor: 'pointer',
       marginTop: '-0.5rem',
     },
-    equipmentButton: (active) => ({
-      padding: '0.5rem 1rem',
-      borderRadius: '20px',
-      border: '1px solid #ccc',
-      backgroundColor: active ? '#007BFF' : '#f1f1f1',
-      color: active ? '#fff' : '#000',
-      marginRight: '0.5rem',
-      marginBottom: '0.5rem',
-      cursor: 'pointer',
-    }),
     block: {
       padding: '1rem',
       marginBottom: '2rem',
@@ -176,11 +262,14 @@ export default function CreateWorkout() {
       color: message.startsWith('✅') ? '#28a745' : '#dc3545',
     },
   };
+  
 
   return (
+    <div style={{ 
+                padding: '1.5rem',
+                margin: 'auto',
+                }}>
     <form onSubmit={handleSubmit} style={styles.form}>
-      <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>Create New Workout</h2>
-
       {/* Title */}
       <input
         style={styles.input}
@@ -207,71 +296,69 @@ export default function CreateWorkout() {
         onChange={(e) => setUserEmailInput(e.target.value)}
       />
 
-      {/* Equipment selection */}
-      <div style={styles.sectionTitle}>Select Equipment:</div>
-      <div>
-        {['Body weight', 'Cable', 'Swiss ball'].map((eq) => (
-          <button
-            type="button"
-            key={eq}
-            onClick={() => toggleEquipment(eq)}
-            style={styles.equipmentButton(equipment.includes(eq))}
-          >
-            {equipment.includes(eq) ? `✓ ${eq}` : eq}
-          </button>
-        ))}
-      </div>
+    
 
-      {/* Blocks & Exercises */}
       {blocks.map((block, blockIdx) => (
         <div key={blockIdx} style={styles.block}>
           <div style={styles.blockHeader}>
             <h3>Block {blockIdx + 1}</h3>
-            <select
-              value={block.type}
-              onChange={(e) => handleBlockChange(blockIdx, 'type', e.target.value)}
-              style={{ padding: '0.4rem', borderRadius: '6px' }}
-            >
-              <option value="regular">Regular</option>
-              <option value="superset">Superset</option>
-            </select>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <input
+                  type="date"
+                  value={block.scheduledDate}
+                  onChange={(e) => handleBlockChange(blockIdx, 'scheduledDate', e.target.value)}
+                  style={{ 
+                    padding: '0.4rem 1.25rem 0.4rem 0.7rem', 
+                    borderRadius: '6px',
+                    border: '1px solid #ccc',
+                    fontSize: '14px',
+                    marginRight:'2.25rem'
+                  }}
+                />
+              </div>
           </div>
 
-          {block.exercises.map((ex, exIdx) => (
+          {block.exercises.map((exercise, exIdx) => (
             <div key={exIdx} style={styles.exerciseWrapper}>
               <input
-                style={styles.input}
+                style={exercise.validationError ? styles.inputError : styles.input}
                 placeholder="Exercise Name"
-                value={ex.name}
-                onChange={(e) =>
-                  handleExerciseChange(blockIdx, exIdx, 'name', e.target.value)
-                }
+                value={exercise.name}
+                onChange={(e) => handleExerciseChange(blockIdx, exIdx, 'name', e.target.value)}
+                required
+              />
+              {exercise.validationError && (
+                <div style={styles.validationError}>
+                  {exercise.validationError}
+                </div>
+              )}
+              
+              <input
+                style={styles.input}
+                placeholder="Sets (e.g. 2-3)"
+                value={exercise.sets}
+                onChange={(e) => handleExerciseChange(blockIdx, exIdx, 'sets', e.target.value)}
                 required
               />
               <input
                 style={styles.input}
-                placeholder="Sets (e.g. 15/30)"
-                value={ex.sets}
-                onChange={(e) =>
-                  handleExerciseChange(blockIdx, exIdx, 'sets', e.target.value)
-                }
+                placeholder="Reps (e.g. 6-10)"
+                value={exercise.reps}
+                onChange={(e) => handleExerciseChange(blockIdx, exIdx, 'reps', e.target.value)}
                 required
               />
               <input
                 style={styles.input}
-                placeholder="Image URL"
-                value={ex.imageUrl}
-                onChange={(e) =>
-                  handleExerciseChange(blockIdx, exIdx, 'imageUrl', e.target.value)
-                }
+                placeholder="Rest (e.g. 2-3mins)"
+                value={exercise.rest}
+                onChange={(e) => handleExerciseChange(blockIdx, exIdx, 'rest', e.target.value)}
+                required
               />
               <input
                 style={styles.input}
-                placeholder="Notes (e.g. Rest 60 sec)"
-                value={ex.notes}
-                onChange={(e) =>
-                  handleExerciseChange(blockIdx, exIdx, 'notes', e.target.value)
-                }
+                placeholder="Notes (e.g. Slow and controlled)"
+                value={exercise.notes}
+                onChange={(e) => handleExerciseChange(blockIdx, exIdx, 'notes', e.target.value)}
               />
 
               <button
@@ -294,7 +381,6 @@ export default function CreateWorkout() {
         </div>
       ))}
 
-      {/* Add another block */}
       <div style={{ marginBottom: '1rem' }}>
         <button
           type="button"
@@ -305,7 +391,6 @@ export default function CreateWorkout() {
         </button>
       </div>
 
-      {/* Submit */}
       <button
         type="submit"
         style={{ ...styles.button, backgroundColor: '#28a745', color: '#fff' }}
@@ -315,5 +400,6 @@ export default function CreateWorkout() {
 
       {message && <p style={styles.message}>{message}</p>}
     </form>
+    </div>
   );
 }

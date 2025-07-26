@@ -6,7 +6,11 @@ import { Doughnut } from 'react-chartjs-2';
 // Register ChartJS components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const RecipeModal = ({ recipe, isOpen, onClose }) => {
+const RecipeModal = ({ 
+  recipe, 
+  isOpen, 
+  onClose 
+}) => {
   const [activeTab, setActiveTab] = useState('Ingredients');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 568);
@@ -51,7 +55,6 @@ const RecipeModal = ({ recipe, isOpen, onClose }) => {
     background: 'rgb(228, 222, 222)',
     borderRadius: '10px',
     maxWidth: '600px',
-    height: '81vh',
     boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
     overflowY: 'auto',
   };
@@ -63,7 +66,6 @@ const RecipeModal = ({ recipe, isOpen, onClose }) => {
           ...modalStyle,
           width: isMobile ? '95vw' : '600px',
           maxWidth: isMobile ? '95vw' : '600px',
-          height: isMobile ? '80vh' : '81vh',
           margin: isMobile ? '10px' : '0'
         }}>
           <button
@@ -98,11 +100,11 @@ const RecipeModal = ({ recipe, isOpen, onClose }) => {
                 src={recipe.imageUrl}
                 alt=''
                 style={{ 
-                  width: isMobile ? '90%' : '255px', 
-                  height: isMobile ? '180px' : '210px', 
+                  width: isMobile ? '85%' : '210px', 
+                  height: isMobile ? '85%' : '210px', 
                   cursor: 'pointer', 
                   borderRadius: '8px', 
-                  marginLeft: isMobile ? '0' : '10px', 
+                  marginLeft: isMobile ? '0' : '20px', 
                   marginTop: isMobile ? '20px' : '30px',
                   objectFit: 'cover'
                 }}
@@ -282,7 +284,7 @@ const RecipeModal = ({ recipe, isOpen, onClose }) => {
             background: 'rgb(255, 255, 255)', 
             borderRadius: '10px',  
             minHeight: isMobile ? '200px' : '285px', 
-            maxHeight: isMobile ? '60vh' : 'none',
+            maxHeight: isMobile ? '40vh' : '40vh',
             overflowY: 'auto', 
             boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
           }}> 
@@ -329,7 +331,7 @@ const RecipeModal = ({ recipe, isOpen, onClose }) => {
               ))}
             </div>
             
-            <div style={{ padding: isMobile ? '15px' : '20px', paddingTop: '0px'}}>
+            <div style={{ padding: isMobile ? '0px 15px' : '0px 20px'}}>
               {activeTab === 'Ingredients' && (
                 <div>
                   <h5>Unit: Imperial US </h5>
@@ -439,6 +441,7 @@ const RecipeModal = ({ recipe, isOpen, onClose }) => {
                     width: isMobile ? '8rem' : '10rem', 
                     position: 'relative'
                   }}>
+                    
                     <Doughnut
                       data={{
                         labels: ['Protein', 'Carbs', 'Fat'],
