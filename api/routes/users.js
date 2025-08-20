@@ -8,7 +8,7 @@ const Admin = require('../models/Admin');
 const SECRET_KEY = 'mySecretKey'; // In production, store in .env
 
 router.get('/', async (req, res) => {
-  const users = await User.find({}, 'firstName lastName email createdAt'); // Only return needed fields
+  const users = await User.find({});
   res.json(users);
 });
 
@@ -54,6 +54,27 @@ router.post('/login', async (req, res) => {
 
   res.json({ token, user: { id: user._id, email: user.email, firstName: user.firstName, role: 'user' } });
 });
+
+// PATCH user by ID (update firstName, lastName, email, etc.)
+router.patch('/:id', async (req, res) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body, // Update with whatever is sent
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error('Error updating user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 
 

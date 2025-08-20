@@ -33,6 +33,7 @@ app.use(cors());
 
 
 
+
 app.use('/users', usersRouter);
 app.use('/admin', adminRouter);
 app.use('/workouts', workoutRouter);

@@ -47,7 +47,9 @@ import CreateRecipe from './components/admin/create/CreateRecipe.js';
 import MealPlanDetail from './components/admin/MealPlanDetail.js';
 
 import CreateExercise from './components/admin/create/CreateExercise.js';
-import AdminExercises from './components/admin/AdminExerciseList.js'
+import AdminExercises from './components/admin/AdminExerciseList.js';
+
+import UserSettings from  './components/user/UserSettings.js';
 
 // Import your logo
 import logo2 from './assets/logo2.png';
@@ -153,6 +155,7 @@ function AppContent({ menuOpen, setMenuOpen, sidebarOpen, setSidebarOpen }) {
           <Route path="/myworkouts" element={<ProtectedRoute allowedRoles={['user']}> <MyWorkouts /> </ProtectedRoute>} />
           <Route path="/workout/:id" element={<ProtectedRoute allowedRoles={['user', 'admin']}> <WorkoutDetail/> </ProtectedRoute>} />
           <Route path="/mynutrition" element={<ProtectedRoute allowedRoles={['user']}> <MyNutrition /> </ProtectedRoute>} />
+          <Route path="/usersettings" element={<ProtectedRoute allowedRoles={['user']}> <RouteWithHeader title="Settings" element={<UserSettings />} /> </ProtectedRoute>} />
 
           <Route path="/secretadmin" element={<ProtectedRoute allowedRoles={['admin']}> <SecretAdmin /> </ProtectedRoute>} />
           <Route path="/createworkout" element={<ProtectedRoute allowedRoles={['admin']}><RouteWithHeader title="Create Workout" element={<CreateWorkout />} /></ProtectedRoute>} />
@@ -233,7 +236,7 @@ function LeftSidebar({ sidebarOpen, setSidebarOpen, setCurrentPage, setActiveSec
       roles: ['user']
     },
     nutrition: {
-      icon: '💪',
+      icon: '🍽️',
       label: 'Nutrition',
       userPath: '/mynutrition',
       relatedPaths: [],
