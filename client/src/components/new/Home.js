@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import gymMe from '../../assets/gymMe.PNG';
 import profMe from '../../assets/profMe.png';
 
+
 gsap.registerPlugin(ScrollTrigger);
 
 export default function Home() {

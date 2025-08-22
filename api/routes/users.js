@@ -3,14 +3,37 @@ const jwt = require('jsonwebtoken');
 var router = express.Router();
 const User = require('../models/User');
 const Admin = require('../models/Admin');
+const authenticateToken = require('../middleware/authenticateToken');
+
+
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 
 const SECRET_KEY = 'mySecretKey'; // In production, store in .env
+
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads/profile-pictures')); // save to backend/uploads/profile-pictures
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // unique filename
+  }
+});
+const upload = multer({ storage });
+
 
 router.get('/', async (req, res) => {
   const users = await User.find({});
   res.json(users);
 });
+
+router.get('/me', authenticateToken, async (req, res) => {
+  const user = await User.findById(req.user.id);
+  res.json(user);
+})
 
 router.delete('/:id', async (req, res) => {
   await User.findByIdAndDelete(req.params.id);
@@ -56,17 +79,44 @@ router.post('/login', async (req, res) => {
 });
 
 // PATCH user by ID (update firstName, lastName, email, etc.)
-router.patch('/:id', async (req, res) => {
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      req.body, // Update with whatever is sent
-      { new: true, runValidators: true }
-    );
 
-    if (!updatedUser) {
+
+router.patch('/:id', upload.single('profilePicture'), async (req, res) => {
+  try {
+    // Find the user first
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    const updateData = { ...req.body };
+
+    // If a new file is uploaded
+    if (req.file) {
+      // Delete old profile picture if it exists
+      if (user.profilePicture) {
+        const oldPath = path.join(__dirname, `../${user.profilePicture}`);
+
+        fs.unlink(oldPath, (err) => {
+          if (err) {
+            console.error("Failed to delete old profile picture:", err);
+          } else {
+            console.log("Old profile picture deleted:", oldPath);
+          }
+        });
+      }
+
+      // Save new file URL
+      updateData.profilePicture = `/uploads/profile-pictures/${req.file.filename}`;
+    }
+
+    // Update user with new info
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     res.json(updatedUser);
   } catch (err) {
@@ -74,6 +124,7 @@ router.patch('/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 
 

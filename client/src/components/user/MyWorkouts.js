@@ -34,11 +34,16 @@ export default function MyWorkouts() {
   if (loading) {
     return (
       <div style={{ 
-        padding: '1rem', 
+        padding: '1rem',
         textAlign: 'center',
-        fontSize: '1.1rem'
       }}>
-        Loading your workout...
+        <p style={{ 
+          fontSize: '1.1rem',
+          color: '#666',
+          marginTop: '2rem'
+        }}>
+          <strong>Loading your workouts... </strong>
+        </p>
       </div>
     );
   }
@@ -48,13 +53,12 @@ export default function MyWorkouts() {
     return (
       <div style={{ 
         padding: '1rem',
-        textAlign: 'center'
+        textAlign: 'center',
       }}>
-        <h1>MY WORKOUTS</h1>
         <p style={{ 
           fontSize: '1.1rem',
           color: '#666',
-          marginTop: '2rem'
+          marginTop: '4rem'
         }}>
           No workouts assigned yet.
         </p>

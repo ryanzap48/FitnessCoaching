@@ -3,13 +3,22 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 
 export default function UserDashboard() {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [workouts, setWorkouts] = useState([]);
   const [nutritionPlans, setNutritionPlans] = useState([]);
+  const [ userData, setUserData ] = useState([]);
+
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const userRes = await fetch ('http://localhost:9000/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const myData = await userRes.json();
+        setUserData(myData);
+        
         const workoutRes = await fetch('http://localhost:9000/workouts/my', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -34,8 +43,8 @@ export default function UserDashboard() {
   
   return (
     <div style={containerStyle}>
-      <h2 style={headerStyle}>Welcome back, {user?.name || 'User'}!</h2>
-      <p style={subHeaderStyle}>Email: {user?.email}</p>
+      <h2 style={headerStyle}>Welcome back, {userData?.firstName}!</h2>
+     
 
       <div style={gridStyle}>
         <Link to="/myworkouts" style={cardLinkStyle}>
@@ -69,17 +78,12 @@ const headerStyle = {
   marginBottom: '0.5rem',
 };
 
-const subHeaderStyle = {
-  fontSize: '1rem',
-  color: '#555',
-  marginBottom: '2rem',
-};
-
 const gridStyle = {
   display: 'flex',
   gap: '2rem',
   flexWrap: 'wrap',
   justifyContent: 'center',
+  marginTop: '3rem'
 };
 
 const cardLinkStyle = {

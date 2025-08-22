@@ -34,11 +34,16 @@ export default function MyNutrition() {
   if (loading) {
     return (
       <div style={{ 
-        padding: '1rem', 
+        padding: '1rem',
         textAlign: 'center',
-        fontSize: '1.1rem'
       }}>
-        Loading your meal plan...
+        <p style={{ 
+          fontSize: '1.1rem',
+          color: '#666',
+          marginTop: '2rem'
+        }}>
+          <strong>Loading your mealplan... </strong>
+        </p>
       </div>
     );
   }
@@ -53,9 +58,9 @@ export default function MyNutrition() {
         <p style={{ 
           fontSize: '1.1rem',
           color: '#666',
-          marginTop: '2rem'
+          marginTop: '4rem'
         }}>
-          No workouts assigned yet.
+          No meal plans assigned yet.
         </p>
       </div>
     );

@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [role, setRole] = useState(localStorage.getItem('role') || 'user'); // default to user
 
-
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
@@ -67,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated, isAdmin, role }}>
+    <AuthContext.Provider value={{ token, login, logout, isAuthenticated, isAdmin, role}}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,9 +6,13 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors');
 var mongoose = require('mongoose');
+var app = express();
 
 mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log("✅ MongoDB connected"))
+
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 var usersRouter = require('./routes/users');
 var adminRouter = require('./routes/admin');
@@ -20,7 +24,7 @@ var exerciseRouter = require('./routes/exercises');
 
 var aiGenerateRouter = require('./routes/aiGenerate');
 
-var app = express();
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views')); // folder for your .ejs files
 
