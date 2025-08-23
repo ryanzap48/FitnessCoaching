@@ -17,7 +17,7 @@ export default function Question5() {
   const poundsNum = parseInt(pounds, 10);
   if (!isNaN(poundsNum) && poundsNum > 99 && poundsNum < 501) {
     const kg = poundsNum * 0.45359237;
-    updateAnswer('weight', Math.round(kg * 100) / 100); // Save as kg
+    updateAnswer('weight', [...(userAnswers.weight || []), Math.round(kg * 100) / 100]); // Save as kg
   }
 }, [pounds, updateAnswer]);
   

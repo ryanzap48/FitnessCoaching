@@ -142,10 +142,11 @@ export default function UserDashboard() {
   }, [activeMealPlan, currentDay, categories, currentRecipeIndexes, getCurrentRecipe]);
 
   const getMetricInfo = (key) => {
-    const entries = userData?.metrics?.[key] || [];
+    const entries = userData?.[key] || [];
     if (entries.length === 0) return { current: null, previous: null, percentChange: null, entries: [] };
-
+   
     const current = entries[entries.length - 1];
+    
     const previous = entries.length > 1 ? entries[entries.length - 2] : null;
     const percentChange = previous ? (((current.value - previous.value) / previous.value) * 100).toFixed(1) : null;
     return { current, previous, percentChange, entries };

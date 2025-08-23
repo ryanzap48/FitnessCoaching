@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
   age:           { type: Number, required: true },
   gender:        { type: String },
   height:        { type: Number }, // in cm
-  weight:        { type: Number }, // in kg
+  weight:        { type: [Number], default: [] }, // in kg
+  sleep:         { type: [Number], default: []},
   targetWeight:  { type: Number },
   experience:    { type: String },
   exercise:      { type: Number }, // sessions/week
