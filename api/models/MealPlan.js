@@ -42,6 +42,10 @@ const mealPlanSchema = new mongoose.Schema({
     imageUrl: {type: String},
     isDraft: {type: Boolean, default: false},
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    currentRecipeIndexes: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
+    }
 
 }, { timestamps: true });
 

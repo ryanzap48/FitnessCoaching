@@ -308,6 +308,52 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Set current recipe index for a specific meal
+router.patch('/:id/set-current-recipe', authenticateToken, async (req, res) => {
+    try {
+        const { day, category, recipeIndex } = req.body;
+        
+        // Validate required fields
+        if (!day || !category || recipeIndex === undefined) {
+            return res.status(400).json({ 
+                message: 'Day, category, and recipeIndex are required' 
+            });
+        }
+
+        // Validate day and category
+        const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const validCategories = ['breakfast', 'lunch', 'dinner', 'snack'];
+        
+        if (!validDays.includes(day.toLowerCase())) {
+            return res.status(400).json({ message: 'Invalid day' });
+        }
+        
+        if (!validCategories.includes(category.toLowerCase())) {
+            return res.status(400).json({ message: 'Invalid category' });
+        }
+
+        const key = `${day}-${category}`;
+        const updateField = `currentRecipeIndexes.${key}`;
+
+        const mealPlan = await MealPlan.findByIdAndUpdate(
+            req.params.id,
+            { $set: { [updateField]: recipeIndex } },
+            { new: true }
+        );
+
+        if (!mealPlan) {
+            return res.status(404).json({ message: 'Meal plan not found' });
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error setting current recipe index:', err);
+        res.status(500).json({ 
+            message: 'Error setting current recipe index', 
+            error: err.message 
+        });
+    }
+});
 
 router.patch('/:id/add-recipe', authenticateToken, async (req, res) => {
     try {

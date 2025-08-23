@@ -41,6 +41,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 
+
 // POST a new user
 router.post('/', async (req, res) => {
   const newUser = new User(req.body);

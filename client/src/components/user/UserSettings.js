@@ -27,28 +27,27 @@ export default function UserSettings() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const userRes = await fetch('http://localhost:9000/users/', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const users = await userRes.json();
+      try {
+        const res = await fetch(`http://localhost:9000/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const currentUser = await res.json();
 
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentUser = users.find(u => u.email === payload.email);
-
-      setUserData(currentUser);
-      setFormData({
-        id: currentUser._id,
-        firstName: currentUser.firstName,
-        lastName: currentUser.lastName,
-        email: currentUser.email,
-        password: currentUser.password,
-        phone: formatPhoneNumber(currentUser.phone || ''),
-        profileColor: currentUser.profileColor,
-        profilePicture : currentUser.profilePicture
-      });
-      console.log(currentUser.profilePicture);
-      
-      setLoading(false);
+        setUserData(currentUser);
+        setFormData({
+          id: currentUser._id,
+          firstName: currentUser.firstName,
+          lastName: currentUser.lastName,
+          email: currentUser.email,
+          password: currentUser.password,
+          phone: formatPhoneNumber(currentUser.phone || ''),
+          profileColor: currentUser.profileColor,
+          profilePicture: currentUser.profilePicture,
+        });
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch user:', err);
+      }
     };
     fetchData();
   }, [token]);
@@ -104,40 +103,59 @@ const validateField = (field, value) => {
 
 const handleSave = async (field, file = null) => {
   try {
+    // If it's not a file, check whether the value has changed
+    if (!file) {
+      let newValue = formData[field];
+      let oldValue = userData[field];
+
+      // Normalize phone numbers for comparison
+      if (field === "phone") {
+        newValue = newValue.replace(/\D/g, "");
+        oldValue = (oldValue || "").replace(/\D/g, "");
+      }
+
+      if (newValue === oldValue) {
+        // Nothing changed → just close edit mode, no message
+        setEditStates(prev => ({ ...prev, [field]: false }));
+        return;
+      }
+    }
+
     let body;
     let headers = { Authorization: `Bearer ${token}` };
 
     if (file) {
-      // Handle file uploads
       body = new FormData();
       body.append(field, file);
     } else {
       // Validate field
       const error = validateField(field, formData[field]);
       if (error) {
-        showMessage(field, error); // show under the specific field
+        showMessage(field, error);
         return;
       }
 
       let valueToSave = formData[field];
-      if (field === 'phone') valueToSave = valueToSave.replace(/\D/g, '');
+      if (field === "phone") valueToSave = valueToSave.replace(/\D/g, "");
       body = JSON.stringify({ [field]: valueToSave });
-      headers['Content-Type'] = 'application/json';
+      headers["Content-Type"] = "application/json";
     }
 
     const res = await fetch(`http://localhost:9000/users/${userData._id}`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers,
-      body
+      body,
     });
 
-    if (!res.ok) throw new Error('Update failed');
+    if (!res.ok) throw new Error("Update failed");
 
     const updated = await res.json();
     setUserData(updated);
 
-    // Update formData locally
-    setFormData(prev => ({ ...prev, [field]: file ? updated[field] : formData[field] }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: file ? updated[field] : formData[field],
+    }));
     if (!file) setEditStates(prev => ({ ...prev, [field]: false }));
 
     showMessage(field, `${field} saved successfully!`);
@@ -145,6 +163,7 @@ const handleSave = async (field, file = null) => {
     showMessage(field, `Failed to save ${field}`);
   }
 };
+
 
   const formatPhoneNumber = (value) => {
     // Remove all non-digits
@@ -334,10 +353,18 @@ const handleSave = async (field, file = null) => {
                     name="phone"
                     value={formData.phone || ''}
                     onChange={handleChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSave('phone');
+                      }
+                    }}
                     style={{ ...infoStyle, flex: 1 }}
                   />  
                 ) : (
-                  <p style={{ ...infoStyle, flex: 1, margin: 0 }}><strong>{formatPhoneNumber(userData.phone || '')}</strong></p>
+                  <p style={{ ...infoStyle, flex: 1, margin: 0 }}>
+                    <strong>{formatPhoneNumber(userData.phone || '')}</strong>
+                  </p>
                 )}
                 <button
                   onClick={() => {
@@ -366,10 +393,18 @@ const handleSave = async (field, file = null) => {
                     name="email"
                     value={formData.email || ''}
                     onChange={handleChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSave('email');
+                      }
+                    }}
                     style={{ ...infoStyle, flex: 1 }}
                   />
                 ) : (
-                  <p style={{ ...infoStyle, flex: 1, margin: 0 }}><strong>{userData.email}</strong></p>
+                  <p style={{ ...infoStyle, flex: 1, margin: 0 }}>
+                    <strong>{userData.email}</strong>
+                  </p>
                 )}
                 <button
                   onClick={() => {
@@ -403,10 +438,16 @@ const handleSave = async (field, file = null) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {editStates.password ? (
                   <input
-                    type="text" // always visible while editing
+                    type="text"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSave('password');
+                      }
+                    }}
                     style={{ ...infoStyle, flex: 1 }}
                   />
                 ) : (
@@ -448,9 +489,21 @@ const handleSave = async (field, file = null) => {
             style={{padding: '1rem 0.5rem'}}
             >
               <span style={{fontWeight: '500', fontSize: '15px'}}>Account Control</span>
-              <div style={{ display: 'flex', paddingTop: '1rem', gap: '33rem'}}>
-                <span style={{fontWeight: '300', fontSize: '13px'}}>Delete Account</span>
-                <button style={{ display: 'flex', border: 'none', background: 'none', color: 'darkred', fontWeight: '300', fontSize: '13px', padding: '0'}} onClick={()=> handleDelete(formData.id)}>Delete</button>
+              <div style={{ display: 'flex', paddingTop: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: '300', fontSize: '13px' }}>Delete Account</span>
+                <button
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    color: 'darkred',
+                    fontWeight: '300',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => handleDelete(formData.id)}
+                >
+                  Delete
+                </button>
               </div>
           </section>
         </div>

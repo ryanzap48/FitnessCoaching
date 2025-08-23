@@ -2,7 +2,6 @@ import deleteButton from '../../../assets/bin.png';
 import draftButton from '../../../assets/edit-button.png';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
-
 const RecipeCard = ({ 
   recipe, 
   onCardClick, 
@@ -14,7 +13,8 @@ const RecipeCard = ({
   currentIndex = 0,
   day,
   category,
-  onConvertToDraft
+  onConvertToDraft,
+  scale = 1 // New scale prop with default value of 1
 }) => {
   
   const cycleToNextRecipe = (day, category) => {
@@ -29,14 +29,21 @@ const RecipeCard = ({
     }
   };
 
+  // Calculate scaled dimensions
+  const scaledWidth = 320 * scale;
+  const scaledHeight = 420 * scale;
+  const scaledImageWidth = 300 * scale;
+  const scaledImageHeight = 300 * scale;
+  const scaledFontSize = 22 * scale;
+
   return (
     <div
       style={{
         position: 'relative',
         display: 'flex',
         border: '1px solid #ccc',
-        width: '320px',
-        height: '420px',
+        width: `${scaledWidth}px`,
+        height: `${scaledHeight}px`,
         cursor: 'pointer',
         flexDirection: 'column',
         borderRadius: '8px',
@@ -57,13 +64,13 @@ const RecipeCard = ({
           disabled={recipes.length <= 1}
           style={{
             position: 'absolute',
-            top: '5px',
-            right: '8px', // Changed from right to left
-            width: '30px',
-            height: '30px',
+            top: `${5 * scale}px`,
+            right: `${8 * scale}px`,
+            width: `${30 * scale}px`,
+            height: `${30 * scale}px`,
             backgroundColor: 'rgba(255, 255, 255, 0.9)',
             cursor: recipes.length > 1 ? 'pointer' : 'not-allowed',
-            fontSize: '20px',
+            fontSize: `${20 * scale}px`,
             display: 'flex',
             border: 'none',
             alignItems: 'center',
@@ -96,13 +103,13 @@ const RecipeCard = ({
           disabled={recipes.length <= 1}
           style={{
             position: 'absolute',
-            top: '5px',
-            left: '8px', // Changed from right to left
-            width: '30px',
-            height: '30px',
+            top: `${5 * scale}px`,
+            left: `${8 * scale}px`,
+            width: `${30 * scale}px`,
+            height: `${30 * scale}px`,
             backgroundColor: 'rgba(255, 255, 255)',
             cursor: recipes.length > 1 ? 'pointer' : 'not-allowed',
-            fontSize: '20px',
+            fontSize: `${20 * scale}px`,
             display: 'flex',
             border: 'none',
             alignItems: 'center',
@@ -130,24 +137,22 @@ const RecipeCard = ({
         </>
       )}
 
-      {/* Your existing content - removed empty div */}
-  
       <div style={{ 
         display: 'flex', 
-        gap: '40px', 
-        marginTop: '10px', 
-        marginBottom: '10px'
+        gap: `${40 * scale}px`, 
+        marginTop: `${10 * scale}px`, 
+        marginBottom: `${10 * scale}px`
       }}>
-        <h4 style={{ margin: 0 }}>{recipe.category} </h4> •
-        <h4 style={{ margin: 0 }}>{recipe.calories} cals</h4>
+        <h4 style={{ margin: 0, fontSize: `${16 * scale}px` }}>{recipe.category} </h4> •
+        <h4 style={{ margin: 0, fontSize: `${16 * scale}px` }}>{recipe.calories} cals</h4>
       </div>
 
       <img
         src={recipe.imageUrl}
         alt='recipe'
         style={{ 
-          width: '300px', 
-          height: '300px', 
+          width: `${scaledImageWidth}px`, 
+          height: `${scaledImageHeight}px`, 
           cursor: 'pointer', 
           borderRadius: '8px' 
         }}
@@ -155,24 +160,24 @@ const RecipeCard = ({
       
       <h4 style={{ 
         fontFamily: 'Open Sans, sans-serif', 
-        marginTop: '10px', 
+        marginTop: `${10 * scale}px`, 
         marginBottom: '0px', 
         fontWeight: '100', 
-        fontSize: '22px'
+        fontSize: `${scaledFontSize}px`
       }}>
         {recipe.name}
       </h4>
       
       <div style={{ 
         display: 'flex', 
-        gap: '10px', 
-        marginTop: '10px', 
-        marginBottom: '10px'
+        gap: `${10 * scale}px`, 
+        marginTop: `${10 * scale}px`, 
+        marginBottom: `${10 * scale}px`
       }}>
-        <h4 style={{ margin: 0, fontWeight: '100' }}>{recipe.calories} cals</h4>•
-        <h4 style={{ margin: 0, fontWeight: '100' }}>P{recipe.protein} g</h4>•
-        <h4 style={{ margin: 0, fontWeight: '100' }}>C{recipe.carbs} g</h4>•
-        <h4 style={{ margin: 0, fontWeight: '100' }}>F{recipe.fats} g</h4>
+        <h4 style={{ margin: 0, fontWeight: '100', fontSize: `${14 * scale}px` }}>{recipe.calories} cals</h4>•
+        <h4 style={{ margin: 0, fontWeight: '100', fontSize: `${14 * scale}px` }}>P{recipe.protein} g</h4>•
+        <h4 style={{ margin: 0, fontWeight: '100', fontSize: `${14 * scale}px` }}>C{recipe.carbs} g</h4>•
+        <h4 style={{ margin: 0, fontWeight: '100', fontSize: `${14 * scale}px` }}>F{recipe.fats} g</h4>
       </div>
 
       {/* Delete Button - Bottom Right */}
@@ -182,9 +187,9 @@ const RecipeCard = ({
           alt='delete'
           style={{ 
             position: 'absolute', 
-            bottom: '8px', 
-            right: '8px', 
-            width: '20px', 
+            bottom: `${8 * scale}px`, 
+            right: `${8 * scale}px`, 
+            width: `${20 * scale}px`, 
             cursor: 'pointer' 
           }}
           onClick={(e) => { 
@@ -198,9 +203,9 @@ const RecipeCard = ({
           alt='convert to draft'
           style={{ 
               position: 'absolute', 
-              top: '8px', 
-              right: '8px', 
-              width: '20px', 
+              top: `${8 * scale}px`, 
+              right: `${8 * scale}px`, 
+              width: `${20 * scale}px`, 
               cursor: recipe.isDraft ? 'not-allowed' : 'pointer',
               opacity: recipe.isDraft ? 0.5 : 1,
               filter: recipe.isDraft ? 'grayscale(100%)' : 'none'

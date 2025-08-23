@@ -40,17 +40,21 @@ const MealPlanDetail = () => {
 
     // Initialize recipe indexes when meal plan loads
     useEffect(() => {
-    if (mealPlan && mealPlan.week && Object.keys(currentRecipeIndexes).length === 0) {
-        const initialIndexes = {};
-        days.forEach(day => {
-            categories.forEach(category => {
-                const key = `${day}-${category}`;
-                initialIndexes[key] = 0; // Start with first recipe
+        if (mealPlan && mealPlan.week && Object.keys(currentRecipeIndexes).length === 0) {
+            const initialIndexes = {};
+            days.forEach(day => {
+                categories.forEach(category => {
+                    const key = `${day}-${category}`;
+                    // Use saved index if available, otherwise default to 0
+                    const savedIndex = mealPlan.currentRecipeIndexes?.[key] || 0;
+                    const recipes = mealPlan.week[day]?.[category] || [];
+                    // Ensure index is within bounds
+                    initialIndexes[key] = Math.min(savedIndex, Math.max(0, recipes.length - 1));
+                });
             });
-        });
-        setCurrentRecipeIndexes(initialIndexes);
-    }
-}, [mealPlan, days, categories, currentRecipeIndexes]);
+            setCurrentRecipeIndexes(initialIndexes);
+        }
+    }, [mealPlan, days, categories, currentRecipeIndexes]);
 
         // Debounced validation function
     const debouncedValidate = useCallback((day, category, recipeName) => {
@@ -143,6 +147,28 @@ const MealPlanDetail = () => {
         [key]: timer
     }));
 }, [token, validationTimers, mealPlan]);
+
+
+// Function to save current recipe selection to backend
+const saveCurrentRecipeIndex = async (day, category, index) => {
+    try {
+        await fetch(`http://localhost:9000/mealplans/${mealPlan._id}/set-current-recipe`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                day,
+                category,
+                recipeIndex: index
+            }),
+        });
+    } catch (error) {
+        console.error('Failed to save current recipe index:', error);
+    }
+};
+
 
 // Handle input change for add recipe
 const handleAddRecipeInputChange = (day, category, value) => {
@@ -282,10 +308,12 @@ const handleAddRecipeInputChange = (day, category, value) => {
         const recipes = mealPlan.week[day]?.[category] || [];
         
         if (recipes.length > 1) {
+            const newIndex = (currentRecipeIndexes[key] + 1) % recipes.length;
             setCurrentRecipeIndexes(prev => ({
                 ...prev,
-                [key]: (prev[key] + 1) % recipes.length
+                [key]: newIndex
             }));
+            saveCurrentRecipeIndex(day, category, newIndex);
         }
     };
 
@@ -295,10 +323,12 @@ const handleAddRecipeInputChange = (day, category, value) => {
         const recipes = mealPlan.week[day]?.[category] || [];
         
         if (recipes.length > 1) {
+            const newIndex = currentRecipeIndexes[key] === 0 ? recipes.length - 1 : currentRecipeIndexes[key] - 1;
             setCurrentRecipeIndexes(prev => ({
                 ...prev,
-                [key]: prev[key] === 0 ? recipes.length - 1 : prev[key] - 1
+                [key]: newIndex
             }));
+            saveCurrentRecipeIndex(day, category, newIndex);
         }
     };
 
