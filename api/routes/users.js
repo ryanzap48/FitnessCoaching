@@ -24,6 +24,16 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+const storageProgress = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads/progress-pictures')); 
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); 
+  }
+});
+const uploadProgress = multer({ storage: storageProgress });
+
 
 router.get('/', async (req, res) => {
   const users = await User.find({});
@@ -44,11 +54,151 @@ router.delete('/:id', async (req, res) => {
 
 // POST a new user
 router.post('/', async (req, res) => {
-  const newUser = new User(req.body);
-  console.log('Constructed Mongoose user:', newUser);
-  await newUser.save();
-  res.status(201).json(newUser);
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      age,
+      gender,
+      height,
+      weight, // expects an array of numbers e.g., [43]
+      targetWeight,
+      experience,
+      exercise,
+      targetExercise,
+      equipment,
+      coachStyle,
+      fitnessGoals,
+    } = req.body;
+
+    const now = new Date();
+
+    const weightObjects = weight.map(w => ({ value: w, date: now }));
+    const currentWeight = weightObjects[weightObjects.length - 1].value;
+
+    const heightM = height / 100;
+    const bmiObjects = weightObjects.map(wObj => ({
+      value: +(wObj.value / (heightM * heightM)).toFixed(2),
+      date: wObj.date,
+    }));
+
+    let bmr;
+    if (gender.toLowerCase() === "male") {
+      bmr = 10 * currentWeight + 6.25 * height - 5 * age + 5;
+    } else {
+      bmr = 10 * currentWeight + 6.25 * height - 5 * age - 161;
+    }
+
+    let activityMultiplier = 1.2; // default sedentary
+    if (exercise <= 1) activityMultiplier = 1.2;
+    else if (exercise <= 3) activityMultiplier = 1.375;
+    else if (exercise <= 5) activityMultiplier = 1.55;
+    else if (exercise <= 7) activityMultiplier = 1.725;
+    else activityMultiplier = 1.9;
+
+    const caloriesObjects = weightObjects.map(wObj => ({
+      value: Math.round(bmr * activityMultiplier),
+      date: wObj.date,
+    }));
+
+    const newUser = new User({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      age,
+      gender,
+      height,
+      weight: weightObjects,
+      bmi: bmiObjects,
+      mCalories: caloriesObjects,
+      targetWeight,
+      experience,
+      exercise,
+      targetExercise,
+      equipment,
+      coachStyle,
+      fitnessGoals,
+    });
+
+    await newUser.save();
+    res.status(201).json(newUser);
+
+  } catch (err) {
+    console.error(err);
+    if (err.code === 11000 && err.keyPattern?.email) {
+      return res.status(400).json({ error: "Email is already taken" });
+    }
+    res.status(400).json({ error: err.message });
+  }
 });
+
+
+router.post('/add-metrics', authenticateToken, async (req, res) => {
+  try {
+    const { weight, sleep } = req.body;
+
+    // Find the user
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const now = new Date();
+
+    // Append new weight entry and recalc BMI + mCalories
+    if (weight !== undefined && weight !== null) {
+      user.weight = user.weight || [];
+      user.weight.push({ value: weight, date: now });
+
+      // Recalculate BMI
+      if (user.height) {
+        const heightM = user.height / 100; // cm → meters
+        const bmi = +(weight / (heightM * heightM)).toFixed(2);
+        user.bmi = user.bmi || [];
+        user.bmi.push({ value: bmi, date: now });
+      }
+
+      // Recalculate maintenance calories
+      let bmr;
+      if (user.gender.toLowerCase() === "male") {
+        bmr = 10 * weight + 6.25 * user.height - 5 * user.age + 5;
+      } else if (user.gender.toLowerCase() === "female" || user.gender.toLowerCase() === "prefer not to say" || user.gender.toLowerCase() === "other") {
+        bmr = 10 * weight + 6.25 * user.height - 5 * user.age - 161;
+      }
+
+      // Determine activity multiplier based on exercise level
+      let activityMultiplier = 1.2; // sedentary default
+      if (user.exercise <= 1) activityMultiplier = 1.2;
+      else if (user.exercise <= 3) activityMultiplier = 1.375;
+      else if (user.exercise <= 5) activityMultiplier = 1.55;
+      else if (user.exercise <= 7) activityMultiplier = 1.725;
+      else activityMultiplier = 1.9;
+
+      const calcCalories = Math.round(bmr * activityMultiplier);
+
+      user.mCalories = user.mCalories || [];
+      user.mCalories.push({ value: calcCalories, date: now });
+    }
+
+    // Append new sleep entry
+    if (sleep !== undefined && sleep !== null) {
+      user.sleep = user.sleep || [];
+      user.sleep.push({ value: sleep, date: now });
+    }
+
+    await user.save();
+
+    res.status(200).json({ message: 'Metrics added', user });
+  } catch (err) {
+    console.error('Error adding metrics:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -125,6 +275,37 @@ router.patch('/:id', upload.single('profilePicture'), async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+router.patch('/:id/progress-picture', uploadProgress.single('progressPicture'), async (req, res) => {
+  console.log(req.file)
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (req.file) {
+      const newPath = `/uploads/progress-pictures/${req.file.filename}`;
+
+      // Ensure progressPictures is an array
+      if (!Array.isArray(user.progressPictures)) {
+        user.progressPictures = [];
+      }
+
+      // Add new picture path to array
+      user.progressPictures.push(newPath);
+      await user.save();
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error('Error adding progress picture:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 
 
 

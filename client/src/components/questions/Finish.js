@@ -89,7 +89,7 @@ export default function Finish() {
 
 
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setMessage('');
     
@@ -110,36 +110,49 @@ export default function Finish() {
       return;
     }
     
-    fetch('http://localhost:9000/users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userAnswers),
-  }).then((res) => {
-      return res.json();
-    })
-    .then(() => {
-      return fetch('http://localhost:9000/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userAnswers.email,
-          password: userAnswers.password,
-        }),
-      });
-    })
-    .then((res) => {
-      return res.json();
-    })
-    .then((data) => {
-      console.log('User role:', data?.user?.role);
-      login(data.token, data.user.role);
-      resetAnswers();
-    })
-    .catch((error) => {
-      console.error('Registration error:', error);
-      setMessage("Registration failed. Please try again.");
-    });
-  };
+    try {
+        // Register user
+        let res = await fetch('http://localhost:9000/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userAnswers),
+        });
+
+        const resData = await res.json();
+
+        if (!res.ok) {
+          const errorMsg = resData?.error || "Registration failed";
+          setMessage(errorMsg);
+          return; // stop further execution
+        }
+
+        res = await fetch('http://localhost:9000/users/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userAnswers.email,
+            password: userAnswers.password,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data?.token) {
+          const errorMsg = data?.error || "Login failed";
+          setMessage(errorMsg);
+          return;
+        }
+
+        console.log('User role:', data.user.role);
+        login(data.token, data.user.role);
+
+        resetAnswers();
+
+      } catch (err) {
+        console.error(err);
+        setMessage("Registration failed. Please try again.");
+      }
+};
 
   useEffect(() => {
     if (Object.keys(userAnswers).length === 0) {

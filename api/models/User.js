@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+const metricSchema = new mongoose.Schema({
+  value: { type: Number, required: true },
+  date: { type: Date, default: Date.now }
+});
+
+
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName:  { type: String, required: true },
@@ -10,8 +16,10 @@ const userSchema = new mongoose.Schema({
   age:           { type: Number, required: true },
   gender:        { type: String },
   height:        { type: Number }, // in cm
-  weight:        { type: [Number], default: [] }, // in kg
-  sleep:         { type: [Number], default: []},
+  weight: [metricSchema],
+  bmi: [metricSchema],
+  mCalories: [metricSchema],
+  sleep: [metricSchema],
   targetWeight:  { type: Number },
   experience:    { type: String },
   exercise:      { type: Number }, // sessions/week
@@ -21,6 +29,7 @@ const userSchema = new mongoose.Schema({
   fitnessGoals:  [{ type: String }],
   profilePicture: { type: String },
   profileColor: { type: String },
+  progressPictures: [{ type: String }]
 },
 { timestamps: true });
 

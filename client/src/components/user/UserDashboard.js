@@ -5,11 +5,13 @@ import RecipeCard from '../admin/recipe/RecipeCard'; // Import your RecipeCard c
 import RecipeModal from '../admin/recipe/RecipeModal'; // Import your RecipeModal component
 import { Doughnut } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
+import percentChangeImage from '../../assets/percentChange.png'
 import {
   Chart as ChartJS,
   ArcElement, Tooltip, Legend,
   CategoryScale, LinearScale, PointElement, LineElement, Title
 } from 'chart.js';
+import InputLogModal from './InputLogModal.js'
 
 // Register ChartJS components
 ChartJS.register(
@@ -24,6 +26,9 @@ export default function UserDashboard() {
   const [userData, setUserData] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [currentRecipeIndexes, setCurrentRecipeIndexes] = useState({});
+  const [isInputModalOpen, setIsInputModalOpen] = useState(false);
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+  const [selectedProgressPhoto, setSelectedProgressPhoto] = useState(null);
 
   const categories = useMemo(() => ['breakfast', 'lunch', 'dinner', 'snack'], []);
   const days = useMemo(() => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], []);
@@ -155,44 +160,134 @@ export default function UserDashboard() {
   const renderMetricCard = (label, key) => {
     const { current, previous, percentChange, entries } = getMetricInfo(key);
 
+    // Determine unit and conversion
+    let displayCurrent = current?.value;
+    let displayPrevious = previous?.value;
+    let unit = '';
+
+    switch (key) {
+      case 'weight':
+        displayCurrent = current ? (current?.value * 2.20462).toFixed(1) : null; // kg → lbs
+        displayPrevious = previous ? (previous.value * 2.20462).toFixed(1) : null;
+        unit = 'lbs';
+        break;
+      case 'mCalories':
+        unit = 'cals';
+        break;
+      case 'sleep':
+        unit = 'hrs';
+        break;
+      default:
+        unit = '';
+    }
+
     return (
       <div style={metricCardStyle}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600' }}>{label}</h3>
         {current ? (
           <>
-            <p><strong>Current:</strong> {current.value}</p>
-            {percentChange !== null && <p><strong>Change:</strong> {percentChange}%</p>}
-            {previous && <p><strong>Previous:</strong> {previous.value}</p>}
-
-            <div style={{ height: '150px' }}>
-              <Line
-                data={{
-                  labels: entries.map(e => new Date(e.date).toLocaleDateString()),
-                  datasets: [{
-                    label: label,
-                    data: entries.map(e => e.value),
-                    borderColor: '#4285f4',
-                    fill: false,
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  plugins: { legend: { display: false } },
-                  scales: {
-                    x: { ticks: { font: { size: 10 } } },
-                    y: { beginAtZero: false }
-                  }
-                }}
-              />
+            <div style={{display: 'flex', justifyItems: 'center', alignItems: 'center', gap: '1rem'}}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600' }}>{label}</h3>
+            
+              <span>{displayCurrent} {unit}</span>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              
+              {percentChange !== null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <img 
+                    src={percentChangeImage}
+                    alt="Change" 
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                  <span style={{ fontSize: '12px' }}>{percentChange}%</span>
+                </div>
+              )}
+              {previous && (
+                <span style={{ fontSize: '12px', color: '#666' }}>
+                  Previous: {displayPrevious} {unit}
+                </span>
+              )}
+            </div>
+            {entries.length > 1 ? (
+              <div style={{ height: '100px' }}>
+                <Line
+                  data={{
+                    labels: entries.map(e => new Date(e.date).toLocaleDateString()),
+                    datasets: [{
+                      label: label,
+                      data: entries.map(e => {
+                        if (key === 'weight') return (e.value * 2.20462).toFixed(1);
+                        return e.value;
+                      }),
+                      borderColor: '#4285f4',
+                      fill: false,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { ticks: { font: { size: 10 } } },
+                      y: { beginAtZero: false }
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <p style={{ fontStyle: 'italic', color: '#666' }}>
+                Input more logs to show trends
+              </p>
+            )}
           </>
         ) : (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>No data available</p>
+          <>
+            <h3 style={{ fontSize: '16px', fontWeight: '600' }}>{label}</h3>
+            <p style={{ color: '#666', fontStyle: 'italic' }}>No data available</p>
+          </>
         )}
       </div>
     );
   };
 
+  const handleSaveMetrics = async ({ weight, sleep }) => {
+    // Example: Send POST request to your backend
+    try {
+      const body = {};
+      if (weight !== null) body.weight = weight / 2.20462; // convert lbs → kg if needed
+      if (sleep !== null) body.sleep = sleep;
+
+      await fetch('http://localhost:9000/users/add-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+
+      // Refresh user data
+      const userRes = await fetch('http://localhost:9000/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const myData = await userRes.json();
+      setUserData(myData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleNewProgressPhoto = async (field, file) => {
+    const body = new FormData();
+    body.append(field, file);
+
+    const res = await fetch(`http://localhost:9000/users/${userData._id}/progress-picture`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+
+  if (!res.ok) throw new Error("Update failed");
+
+  const updated = await res.json();
+  setUserData(updated);
+};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -208,6 +303,7 @@ export default function UserDashboard() {
         });
         const workoutData = await workoutRes.json();
         setWorkouts(workoutData);
+        
 
         const nutritionRes = await fetch('http://localhost:9000/mealplans/my?populate=week', {
           headers: { Authorization: `Bearer ${token}` },
@@ -224,7 +320,7 @@ export default function UserDashboard() {
 
   // Handle modal overflow
   useEffect(() => {
-    if (selectedRecipe) {
+    if (selectedRecipe || isProgressModalOpen || isInputModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -232,170 +328,449 @@ export default function UserDashboard() {
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [selectedRecipe]);
+  }, [selectedRecipe, isProgressModalOpen, isInputModalOpen]);
 
+  console.log(workouts);
   return (
     <div style={containerStyle}>
-      <div style={cardStyle}>
-        {activeMealPlan ? (
-          <>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-              <div style={{display: 'flex', gap: '1.5rem', alignItems: 'center'}}>
-                <span style={cardTitle}>Today's Meal Plan - {currentDay.charAt(0).toUpperCase() + currentDay.slice(1)}</span>
-                <span>{dailyTotals.calories} cal</span>
-                <span>•</span>
-                <span>P {dailyTotals.protein}g</span>
-                <span>C {dailyTotals.carbs}g</span>
-                <span>F {dailyTotals.fats}g</span>
-              </div>
-              <Link 
-                  to={`/mealplans/${activeMealPlan.slug}`}
-                  style={{
-                    color: '#4285f4',
-                    textDecoration: 'none',
-                    fontWeight: '500',
-                    fontSize: '14px'
-                  }}
-                >
-                  View Full Meal Plan →
-                </Link>
-              </div>
-            <hr />
+      <div style={{display: 'flex'}}>
+        <div>
+          <div style={cardStyle}>
+            {activeMealPlan ? (
+              <>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div style={{display: 'flex', gap: '1.5rem', alignItems: 'center'}}>
+                    <span style={cardTitle}>Today's Meal Plan - {currentDay.charAt(0).toUpperCase() + currentDay.slice(1)}</span>
+                    <span>{dailyTotals.calories} cal</span>
+                    <span>•</span>
+                    <span>P {dailyTotals.protein}g</span>
+                    <span>C {dailyTotals.carbs}g</span>
+                    <span>F {dailyTotals.fats}g</span>
+                  </div>
+                  <Link 
+                      to={`/mealplans/${activeMealPlan.slug}`}
+                      style={{
+                        color: '#4285f4',
+                        textDecoration: 'none',
+                        fontWeight: '500',
+                        fontSize: '14px'
+                      }}
+                    >
+                      View Full Meal Plan →
+                    </Link>
+                  </div>
+                <hr />
 
 
-            {/* Today's recipes */}
-            <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap',
-                gap: '15px'
-              }}>
-              {categories.map(category => {
-                const recipes = activeMealPlan.week[currentDay]?.[category] || [];
-                const currentRecipe = getCurrentRecipe(currentDay, category);
-                const currentIndex = currentRecipeIndexes[`${currentDay}-${category}`] || 0;
-                
-                if (recipes.length === 0) return null;
-                
-                return (
-                  <div key={`${currentDay}-${category}`} style={{ 
+                {/* Today's recipes */}
+                <div style={{ 
                     display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center',
-  
+                    flexWrap: 'wrap',
+                    gap: '15px'
                   }}>
-                    <h3 style={{ 
-                      marginBottom: '5px', 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '12px'
-                    }}>
-                      <span>{category.charAt(0).toUpperCase() + category.slice(1)}</span>
-                      
-                      {/* Mini nutrition chart */}
-                      <div style={{ width: '15px', height: '15px' }}>
-                        <Doughnut
-                          data={{
-                            labels: ['Protein', 'Carbs', 'Fat'],
-                            datasets: [{
-                              data: (() => {
-                                if (!currentRecipe) return [0, 0, 0];
-                                
-                                const protein = currentRecipe.protein || 0;
-                                const carbs = currentRecipe.carbs || 0;
-                                const fats = currentRecipe.fats || 0;
-                                
-                                return [
-                                  protein * 4,  // Protein calories
-                                  carbs * 4,    // Carb calories
-                                  fats * 9      // Fat calories
-                                ];
-                              })(),
-                              backgroundColor: ['#4285F4', '#0F9D58', '#FBBC05'],
-                              borderWidth: 0
-                            }]
-                          }}
-                          options={{
-                            cutout: '60%',
-                            plugins: {
-                              legend: { display: false },
-                              tooltip: {
-                                callbacks: {
-                                  label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: ${percentage}%`;
+                  {categories.map(category => {
+                    const recipes = activeMealPlan.week[currentDay]?.[category] || [];
+                    const currentRecipe = getCurrentRecipe(currentDay, category);
+                    const currentIndex = currentRecipeIndexes[`${currentDay}-${category}`] || 0;
+                    
+                    if (recipes.length === 0) return null;
+                    
+                    return (
+                      <div key={`${currentDay}-${category}`} style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center',
+      
+                      }}>
+                        <h3 style={{ 
+                          marginBottom: '5px', 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          gap: '5px',
+                          fontSize: '12px'
+                        }}>
+                          <span>{category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                          
+                          {/* Mini nutrition chart */}
+                          <div style={{ width: '15px', height: '15px' }}>
+                            <Doughnut
+                              data={{
+                                labels: ['Protein', 'Carbs', 'Fat'],
+                                datasets: [{
+                                  data: (() => {
+                                    if (!currentRecipe) return [0, 0, 0];
+                                    
+                                    const protein = currentRecipe.protein || 0;
+                                    const carbs = currentRecipe.carbs || 0;
+                                    const fats = currentRecipe.fats || 0;
+                                    
+                                    return [
+                                      protein * 4,  // Protein calories
+                                      carbs * 4,    // Carb calories
+                                      fats * 9      // Fat calories
+                                    ];
+                                  })(),
+                                  backgroundColor: ['#4285F4', '#0F9D58', '#FBBC05'],
+                                  borderWidth: 0
+                                }]
+                              }}
+                              options={{
+                                cutout: '60%',
+                                plugins: {
+                                  legend: { display: false },
+                                  tooltip: {
+                                    callbacks: {
+                                      label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ${percentage}%`;
+                                      }
+                                    }
                                   }
                                 }
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                      
-                      {/* Nutrition info */}
-                      <div style={{ display: 'flex', gap: '8px', fontSize: '10px', color: '#666' }}>
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Nutrition info */}
+                          <div style={{ display: 'flex', gap: '8px', fontSize: '10px', color: '#666' }}>
+                            {currentRecipe && (
+                              <>
+                                <span><strong>Cal:</strong> {currentRecipe.calories || 0}</span>
+                                <span><strong>P:</strong> {currentRecipe.protein || 0}g</span>
+                                <span><strong>C:</strong> {currentRecipe.carbs || 0}g</span>
+                                <span><strong>F:</strong> {currentRecipe.fats || 0}g</span>
+                              </>
+                            )}
+                          </div>
+                        </h3>
+                        
+                        {/* Recipe card */}
                         {currentRecipe && (
-                          <>
-                            <span><strong>Cal:</strong> {currentRecipe.calories || 0}</span>
-                            <span><strong>P:</strong> {currentRecipe.protein || 0}g</span>
-                            <span><strong>C:</strong> {currentRecipe.carbs || 0}g</span>
-                            <span><strong>F:</strong> {currentRecipe.fats || 0}g</span>
-                          </>
+                          <RecipeCard
+                            recipe={currentRecipe}
+                            onCardClick={setSelectedRecipe}
+                            showDeleteButton={false}
+                            currentIndex={currentIndex}
+                            recipes={recipes}
+                            day={currentDay}
+                            category={category}
+                            onSwitch={cycleToNextRecipe}
+                            onSwitchPrev={cycleToPrevRecipe}
+                            scale={0.7}
+                          />
                         )}
                       </div>
-                    </h3>
-                    
-                    {/* Recipe card */}
-                    {currentRecipe && (
-                      <RecipeCard
-                        recipe={currentRecipe}
-                        onCardClick={setSelectedRecipe}
-                        showDeleteButton={false}
-                        currentIndex={currentIndex}
-                        recipes={recipes}
-                        day={currentDay}
-                        category={category}
-                        onSwitch={cycleToNextRecipe}
-                        onSwitchPrev={cycleToPrevRecipe}
-                        scale={0.7}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            
-            
-          </>
-        ) : (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>
-            No meal plan assigned. Contact your trainer to get started!
-          </p>
-        )}
-      </div>
+                    );
+                  })}
+                </div>
+                
+                
+              </>
+            ) : (
+              <p style={{ color: '#666', fontStyle: 'italic' }}>
+                No meal plan assigned. Contact your trainer to get started!
+              </p>
+            )}
+          </div>
 
-      {/* Recipe Modal */}
-      {selectedRecipe && (
-        <RecipeModal
-          recipe={selectedRecipe}
-          isOpen={!!selectedRecipe}
-          onClose={() => setSelectedRecipe(null)}
-        />
-      )}
-      <div style={cardStyle}>
-        <span style={cardTitle}>Body Metrics</span>
-        <hr></hr>
-        <div style={metricsGrid}>
-          {renderMetricCard('Weight', 'weight')}
-          {renderMetricCard('Sleep', 'sleep')}
-          {renderMetricCard('BMI', 'bmi')}
-          {renderMetricCard('Calorie Maintenance', 'calories')}
+          {/* Recipe Modal */}
+          {selectedRecipe && (
+            <RecipeModal
+              recipe={selectedRecipe}
+              isOpen={!!selectedRecipe}
+              onClose={() => setSelectedRecipe(null)}
+            />
+          )}
+          <div style={{...cardStyle, width: 'auto'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+              <span style={cardTitle}>Body Metrics</span>
+              <label htmlFor="add-metrics" style={{
+                backgroundColor: '#0F9D58',
+                color: 'white',
+                borderRadius: '50%',
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '18px'
+              }}>
+                +
+                <input
+                  id="add-metrics"
+                  onClick={(e) => setIsInputModalOpen(true)}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+            <hr></hr>
+            <div style={metricsHorizontalGrid}>
+              {renderMetricCard('Weight', 'weight')}
+              {renderMetricCard('Sleep', 'sleep')}
+              {renderMetricCard('BMI', 'bmi')}
+              {renderMetricCard('Calorie Maintenance', 'mCalories')}
+            </div>
+          </div>
+            <InputLogModal
+              isOpen={isInputModalOpen}
+              onClose={() => setIsInputModalOpen(false)}
+              onSave={handleSaveMetrics}
+            />
+          </div>
+          <div>
+            <div style={{height: 'auto'}}>
+              <div style={{...cardStyle, height: '5.375rem', width: 'auto'}}>
+                <span style={cardTitle}>Goals</span>
+                <hr></hr>
+                <h4 style={{marginBottom: '0px'}}>General Goal:</h4>
+                
+                {(userData?.fitnessGoals || []).map((goal, index) => (
+                  <span key={index}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{goal}</span>
+                ))}
+                
+              </div >
+              <div style={{...cardStyle, height: 'auto', minHeight: '5rem'}}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '5rem' }}>
+                  <span style={cardTitle}>Progress Photos</span>
+                  <label htmlFor="progress-pic-input" style={{
+                    backgroundColor: '#0F9D58',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: '18px'
+                  }}>
+                    +
+                    <input
+                      id="progress-pic-input"
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      onChange={(e) => handleNewProgressPhoto('progressPicture', e.target.files[0])}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+                
+                <hr />
+                
+                {userData.progressPictures && userData.progressPictures.length > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
+                      {/* First photo */}
+                      {userData.progressPictures.length > 0 && (() => {
+                        const firstPic = userData.progressPictures[0];
+                        const picData = typeof firstPic === 'string' ? { url: firstPic, date: new Date() } : firstPic;
+                        return (
+                          <div style={{ textAlign: 'center' }}>
+                            <img
+                              src={`http://localhost:9000${picData.url || firstPic}`}
+                              alt="First Progress"
+                              style={{ 
+                                width: '110px', 
+                                height: '110px', 
+                                objectFit: 'cover', 
+                                borderRadius: '8px',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => {
+                                setSelectedProgressPhoto({ ...picData, url: picData.url || firstPic, index: 0 });
+                                setIsProgressModalOpen(true);
+                              }}
+                            />
+                            <p style={{ fontSize: '10px', margin: '0 0 0 0', color: '#666' }}>
+                              First: {new Date(picData.date || picData.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                      
+                      {/* Most recent photo (if different from first) */}
+                      {userData.progressPictures.length > 1 && (() => {
+                        const lastPic = userData.progressPictures[userData.progressPictures.length - 1];
+                        const picData = typeof lastPic === 'string' ? { url: lastPic, date: new Date() } : lastPic;
+                        const lastIndex = userData.progressPictures.length - 1;
+                        return (
+                          <div style={{ textAlign: 'center' }}>
+                            <img
+                              src={`http://localhost:9000${picData.url || lastPic}`}
+                              alt="Latest Progress"
+                              style={{ 
+                                width: '110px', 
+                                height: '110px', 
+                                objectFit: 'cover', 
+                                borderRadius: '8px',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => {
+                                setSelectedProgressPhoto({ ...picData, url: picData.url || lastPic, index: lastIndex });
+                                setIsProgressModalOpen(true);
+                              }}
+                            />
+                            <p style={{ fontSize: '10px', margin: '0 0 0 0', color: '#666' }}>
+                              Latest: {new Date(picData.date || picData.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    
+                    {userData.progressPictures.length > 4 && (
+                      <button
+                        onClick={() => setIsProgressModalOpen(true)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          borderRadius: '6px',
+                          border: '1px solid #ccc',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        View All ({userData.progressPictures.length})
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p>Add your first Progress Photo!</p>
+                )}
+              </div>
+              {isProgressModalOpen && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}>
+                  <div style={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    padding: '1.5rem',
+                    maxWidth: '800px',
+                    maxHeight: '600px',
+                    width: '90%',
+                    display: 'flex',
+                    gap: '1.5rem'
+                  }}>
+                    {/* Left side - Photo list */}
+                    <div style={{
+                      flex: '1',
+                      maxHeight: '500px',
+                      overflowY: 'auto'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3>Progress Photos</h3>
+                        <button
+                          onClick={() => setIsProgressModalOpen(false)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {userData.progressPictures.map((pic, index) => {
+                          const picData = typeof pic === 'string' ? { url: pic, date: new Date() } : pic;
+                          return (
+                            <div
+                              key={index}
+                              onClick={() => setSelectedProgressPhoto({ ...picData, url: picData.url || pic, index })}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                backgroundColor: selectedProgressPhoto?.index === index ? '#f0f0f0' : 'transparent',
+                                border: selectedProgressPhoto?.index === index ? '2px solid #4285f4' : '1px solid #eee'
+                              }}
+                            >
+                              <img
+                                src={`http://localhost:9000${picData.url || pic}`}
+                                alt={`Progress ${index + 1}`}
+                                style={{
+                                  width: '60px',
+                                  height: '60px',
+                                  objectFit: 'cover',
+                                  borderRadius: '6px'
+                                }}
+                              />
+                              <div>
+                                <p style={{ margin: 0, fontWeight: '500' }}>Photo {index + 1}</p>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+                                  {new Date(picData.date || picData.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    {/* Right side - Large photo */}
+                    <div style={{
+                      flex: '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f9f9f9',
+                      borderRadius: '8px',
+                      minHeight: '400px'
+                    }}>
+                      {selectedProgressPhoto ? (
+                        <div style={{ textAlign: 'center' }}>
+                          <img
+                            src={`http://localhost:9000${selectedProgressPhoto.url}`}
+                            alt={`Progress ${selectedProgressPhoto.index + 1}`}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '350px',
+                              objectFit: 'contain',
+                              borderRadius: '8px'
+                            }}
+                          />
+                          <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                            {new Date(selectedProgressPhoto.date || selectedProgressPhoto.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ) : (
+                        <p style={{ color: '#666' }}>Select a photo to view</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+              <div style={{...cardStyle, height: '15.8125rem', width: 'auto'}}>
+                <span style={cardTitle}>Personal Records</span>
+              </div>
+          </div>
+          <div style={{...cardStyle, height: '43rem', width: 'auto'}}>
+            <span style={cardTitle}>Today's Workout</span>
+          </div>
         </div>
-      </div>
     </div>
+    
 
   );
 }
@@ -411,7 +786,9 @@ const cardStyle = {
   border: '1px solid rgb(204, 175, 175)',
   borderRadius: '14px',
   background: 'rgb(214, 206, 206)',
-  width: 'fit-content'
+  width: 'fit-content',
+  marginBottom: '.75rem',
+  marginRight: '.75rem'
 };
 
 const cardTitle = {
@@ -419,17 +796,18 @@ const cardTitle = {
   fontSize: '21px',
 };
 
-const metricsGrid = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gridTemplateRows: '1fr 1fr',
+const metricsHorizontalGrid = {
+  display: 'flex',
   gap: '20px',
+  overflowX: 'auto',
+  paddingBottom: '10px'
 };
 
 const metricCardStyle = {
   border: '1px solid #ccc',
   borderRadius: '12px',
-  padding: '1rem',
+  padding: '0.5rem',
   background: '#fff',
-  minWidth: '200px'
+  minWidth: '160px',
+  flex: '0 0 auto'
 };
