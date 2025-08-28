@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
   fitnessGoals:  [{ type: String }],
   profilePicture: { type: String },
   profileColor: { type: String },
-  progressPictures: [{ type: String }]
+  progressPictures: [{ type: String }],
 },
 { timestamps: true });
 

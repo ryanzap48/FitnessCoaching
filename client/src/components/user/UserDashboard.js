@@ -6,12 +6,15 @@ import RecipeModal from '../admin/recipe/RecipeModal'; // Import your RecipeModa
 import { Doughnut } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
 import percentChangeImage from '../../assets/percentChange.png'
+import { useParams } from 'react-router-dom';
 import {
   Chart as ChartJS,
   ArcElement, Tooltip, Legend,
   CategoryScale, LinearScale, PointElement, LineElement, Title
 } from 'chart.js';
 import InputLogModal from './InputLogModal.js'
+import ExerciseModal from '../admin/exercise/ExerciseModal';
+import WorkoutDayModal from '../admin/WorkoutDayModal';
 
 // Register ChartJS components
 ChartJS.register(
@@ -21,6 +24,7 @@ ChartJS.register(
 
 export default function UserDashboard() {
   const { token } = useAuth();
+  const { id } = useParams();
   const [workouts, setWorkouts] = useState([]);
   const [nutritionPlans, setNutritionPlans] = useState([]);
   const [userData, setUserData] = useState([]);
@@ -29,6 +33,8 @@ export default function UserDashboard() {
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
   const [selectedProgressPhoto, setSelectedProgressPhoto] = useState(null);
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [selectedWorkoutDay, setSelectedWorkoutDay] = useState(null);
 
   const categories = useMemo(() => ['breakfast', 'lunch', 'dinner', 'snack'], []);
   const days = useMemo(() => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], []);
@@ -247,6 +253,33 @@ export default function UserDashboard() {
         )}
       </div>
     );
+  };
+
+  const getTodaysWorkouts = () => {
+    if (!workouts || workouts.length === 0) return [];
+    
+    const today = new Date();
+    const todaysWorkouts = [];
+    
+    workouts.forEach(workout => {
+      if (workout.blocks) {
+        workout.blocks.forEach(block => {
+          const blockDate = new Date(block.scheduledDate);
+          if (
+            blockDate.getDate() === today.getDate() &&
+            blockDate.getMonth() === today.getMonth() &&
+            blockDate.getFullYear() === today.getFullYear()
+          ) {
+            todaysWorkouts.push({
+              ...workout,
+              block: block
+            });
+          }
+        });
+      }
+    });
+    
+    return todaysWorkouts;
   };
 
   const handleSaveMetrics = async ({ weight, sleep }) => {
@@ -762,13 +795,156 @@ export default function UserDashboard() {
               )}
             </div>
               <div style={{...cardStyle, height: '15.8125rem', width: 'auto'}}>
-                <span style={cardTitle}>Personal Records</span>
+                <span style={cardTitle}>Updates</span>
+                <hr></hr>
               </div>
           </div>
-          <div style={{...cardStyle, height: '43rem', width: 'auto'}}>
-            <span style={cardTitle}>Today's Workout</span>
+          <div style={{...cardStyle, height: '43rem', width: '20rem'}}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={cardTitle}>Today's Workout</span>
+              {getTodaysWorkouts().length > 0 && (
+                <Link 
+                  to={`/workouts/${getTodaysWorkouts()[0]._id}`}
+                  style={{
+                    color: '#4285f4',
+                    textDecoration: 'none',
+                    fontWeight: '500',
+                    fontSize: '14px'
+                  }}
+                >
+                  View Full Calendar →
+                </Link>
+              )}
+            </div>
+            <hr />
+            
+            {getTodaysWorkouts().length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                color: '#999',
+                fontStyle: 'italic',
+                marginTop: '2rem'
+              }}>
+                No workouts scheduled for today
+              </div>
+            ) : (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '1rem',
+                maxHeight: '35rem',
+                overflowY: 'auto'
+              }}>
+                {getTodaysWorkouts().map((workoutData, workoutIdx) => (
+                  <div 
+                    key={workoutIdx}
+                    style={{
+                      height: '75vh',
+                      backgroundColor: 'white',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      border: '3px solid #007bff',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      cursor: getTodaysWorkouts().length > 0 ? 'pointer' : 'default',
+                      opacity: getTodaysWorkouts().length === 0 ? 0.6 : 1,
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                    }}
+                    onClick={() => setSelectedWorkoutDay({
+                      date: new Date(),
+                      workouts: [workoutData]
+                    })}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                    }}
+                  >
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#333', textAlign: 'center', }}>
+                      {workoutData.title || 'Workout'}
+                    </h4>
+                    
+                    {workoutData.block.exercises && workoutData.block.exercises.map((ex, exIdx) => (
+                      <div 
+                        key={exIdx}
+                        style={{ 
+                          marginBottom: '1rem',
+                          padding: '0.75rem',
+                          backgroundColor: '#f8f9fa',
+                          borderRadius: '6px',
+                          border: '1px solid #e9ecef'
+                        }}
+                      > 
+                        <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                          {ex.exercise?.name || 'Unnamed Exercise'}
+                        </div>
+                        <div style={{ 
+                          color: '#6c757d', 
+                          fontSize: '0.7rem', 
+                          marginLeft: '0.5rem',
+                          marginBottom: '0.25rem'
+                        }}>
+                          {ex.sets} sets × {ex.reps} reps
+                          {ex.weight && <span> @ {ex.weight}lbs</span>}
+                          {ex.restTime && <span> | Rest: {ex.restTime}s</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+            <button 
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: '#FF8C00',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                marginTop: '0.5rem',
+                transition: 'background-color 0.2s ease'
+              }}
+              onClick={() => setSelectedWorkoutDay({
+                date: new Date(),
+                workouts: getTodaysWorkouts()
+              })}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#FF7F00';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#FF8C00';
+              }}
+            >
+              Log Workout
+            </button>
           </div>
+          {selectedWorkoutDay && (
+            <WorkoutDayModal
+              isOpen={!!selectedWorkoutDay}
+              onClose={() => setSelectedWorkoutDay(null)}
+              date={selectedWorkoutDay.date}
+              workouts={selectedWorkoutDay.workouts}
+              onExerciseClick={setSelectedExercise}
+              isClient={true}
+            />
+          )}
+
+          {selectedExercise && (
+            <ExerciseModal
+              exercise={selectedExercise}
+              isOpen={!!selectedExercise}
+              onClose={() => setSelectedExercise(null)}
+            />
+          )}
+          
         </div>
+        
     </div>
     
 

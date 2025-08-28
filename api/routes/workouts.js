@@ -29,7 +29,11 @@ router.post('/create', async (req, res) => {
 
 // Get workouts assigned to the logged-in user
 router.get('/my', authenticateToken, async (req, res) => {
-  const workouts = await Workout.find({ assignedTo: req.user.id });
+  const workouts = await Workout.find({ assignedTo: req.user.id })
+  .populate({
+      path: 'blocks.exercises.exercise', // deep populate
+      model: 'Exercise', // make sure this matches your model name
+    });
   res.json(workouts);
 });
 
