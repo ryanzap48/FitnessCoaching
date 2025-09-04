@@ -26,6 +26,8 @@ export default function UserDashboard() {
   const { token } = useAuth();
   const { id } = useParams();
   const [workouts, setWorkouts] = useState([]);
+  const [updates, setUpdates] = useState([]);
+
   const [nutritionPlans, setNutritionPlans] = useState([]);
   const [userData, setUserData] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -334,9 +336,15 @@ export default function UserDashboard() {
         const workoutRes = await fetch('http://localhost:9000/workouts/my', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         const workoutData = await workoutRes.json();
         setWorkouts(workoutData);
         
+        const updateRes = await fetch('http://localhost:9000/updates/my', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const updateData = await updateRes.json();
+        setUpdates(updateData);
 
         const nutritionRes = await fetch('http://localhost:9000/mealplans/my?populate=week', {
           headers: { Authorization: `Bearer ${token}` },

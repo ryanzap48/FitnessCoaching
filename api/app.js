@@ -21,6 +21,7 @@ var consultationsRoute = require('./routes/consultations');
 var recipeRouter = require('./routes/recipes');
 var mealPlanRouter = require('./routes/mealPlans');
 var exerciseRouter = require('./routes/exercises');
+var updateRouter = require('./routes/updates');
 
 var aiGenerateRouter = require('./routes/aiGenerate');
 
@@ -47,6 +48,7 @@ app.use('/mealplans', mealPlanRouter);
 app.use('/exercises', exerciseRouter);
 app.use('/aigenerate', aiGenerateRouter);
 
+app.use('/updates', updateRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
