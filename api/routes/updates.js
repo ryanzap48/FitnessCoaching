@@ -32,7 +32,8 @@ router.post('/', async (req, res) => {
 router.get('/my', authenticateToken, async (req, res) => {
   try {
     const updates = await Update.find({ userId: req.user.id })
-      .sort({ createdAt: -1 }); // newest first
+      .populate('userId', 'firstName lastName email') // only fetch these fields
+      .sort({ createdAt: -1 });
 
     res.json(updates);
   } catch (err) {

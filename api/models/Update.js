@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 
-const updateSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User' },
+const updateSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: { type: String, enum: ['body_metric', 'progress_photo', 'log', 'pr'] },
   message: { type: String }, // human-readable message like "You added a new weight log"
   data: { type: Object },    // extra details if needed
@@ -11,3 +11,4 @@ const updateSchema = new Schema({
 
 
 module.exports = mongoose.model('Update', updateSchema);
+

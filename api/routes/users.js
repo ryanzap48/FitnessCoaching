@@ -3,10 +3,12 @@ const jwt = require('jsonwebtoken');
 var router = express.Router();
 const User = require('../models/User');
 const Admin = require('../models/Admin');
+const Update = require('../models/Update');
 const authenticateToken = require('../middleware/authenticateToken');
 
 
 const multer = require('multer');
+const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
@@ -191,6 +193,13 @@ router.post('/add-metrics', authenticateToken, async (req, res) => {
 
     await user.save();
 
+    await Update.create({
+      userId: req.user.id,
+      type: 'metrics',
+      message: 'Updated body metrics',
+      data: { weight, sleep }
+    });
+
     res.status(200).json({ message: 'Metrics added', user });
   } catch (err) {
     console.error('Error adding metrics:', err);
@@ -245,7 +254,7 @@ router.patch('/:id', upload.single('profilePicture'), async (req, res) => {
 
     // If a new file is uploaded
     if (req.file) {
-      // Delete old profile picture if it exists
+      
       if (user.profilePicture) {
         const oldPath = path.join(__dirname, `../${user.profilePicture}`);
 
@@ -258,8 +267,18 @@ router.patch('/:id', upload.single('profilePicture'), async (req, res) => {
         });
       }
 
+      // Delete old profile picture if it exists
+      const processedFilename = Date.now() + ".jpg";
+      const processedPath = path.join(__dirname, "../uploads/profile-pictures", processedFilename);
+      await sharp(req.file.path)
+        .resize(500, 500, { fit: "cover" }) // resize to 500x500
+        .jpeg({ quality: 80 })              // compress
+        .toFile(processedPath);
+
+      fs.unlinkSync(req.file.path);
+
       // Save new file URL
-      updateData.profilePicture = `/uploads/profile-pictures/${req.file.filename}`;
+      updateData.profilePicture = `/uploads/profile-pictures/${processedFilename}`;
     }
 
     // Update user with new info
@@ -268,6 +287,13 @@ router.patch('/:id', upload.single('profilePicture'), async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
+
+    await Update.create({
+      userId: req.params.id,
+      type: 'profilePicture',
+      message: 'Updated profile picture',
+      data: { profilePicture: updateData.profilePicture }
+    });
 
     res.json(updatedUser);
   } catch (err) {
@@ -296,6 +322,13 @@ router.patch('/:id/progress-picture', uploadProgress.single('progressPicture'), 
       // Add new picture path to array
       user.progressPictures.push(newPath);
       await user.save();
+
+      await Update.create({
+        userId: req.params.id,
+        type: 'progressPicture',
+        message: 'Added a new progress picture',
+        data: { progressPicture: newPath }
+      });
     }
 
     res.json(user);
