@@ -22,6 +22,7 @@ var recipeRouter = require('./routes/recipes');
 var mealPlanRouter = require('./routes/mealPlans');
 var exerciseRouter = require('./routes/exercises');
 var updateRouter = require('./routes/updates');
+var logRouter = require('./routes/logs');
 
 var aiGenerateRouter = require('./routes/aiGenerate');
 
@@ -47,6 +48,8 @@ app.use('/recipes', recipeRouter);
 app.use('/mealplans', mealPlanRouter);
 app.use('/exercises', exerciseRouter);
 app.use('/aigenerate', aiGenerateRouter);
+app.use('/log', logRouter);
+
 
 app.use('/updates', updateRouter);
 

@@ -115,7 +115,7 @@ export default function WorkoutCalendar() {
   const weekDays = getWeekDays(currentWeekStart);
 
   return (
-    <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
+    <div style={{ padding: '1rem', fontFamily: 'sans-serif',  }}>
       {/* Week Navigation Header */}
       <div style={{
         display: 'flex',

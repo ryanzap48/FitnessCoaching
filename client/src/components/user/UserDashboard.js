@@ -6,7 +6,10 @@ import RecipeModal from '../admin/recipe/RecipeModal'; // Import your RecipeModa
 import { Doughnut } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
 import percentChangeImage from '../../assets/percentChange.png'
-import { useParams } from 'react-router-dom';
+
+import '../../css/App.css';
+
+
 import {
   Chart as ChartJS,
   ArcElement, Tooltip, Legend,
@@ -15,6 +18,7 @@ import {
 import InputLogModal from './InputLogModal.js'
 import ExerciseModal from '../admin/exercise/ExerciseModal';
 import WorkoutDayModal from '../admin/WorkoutDayModal';
+import WorkoutLogModal from './WorkoutLogModal.js';
 
 // Register ChartJS components
 ChartJS.register(
@@ -24,7 +28,6 @@ ChartJS.register(
 
 export default function UserDashboard() {
   const { token } = useAuth();
-  const { id } = useParams();
   const [workouts, setWorkouts] = useState([]);
   const [updates, setUpdates] = useState([]);
 
@@ -37,6 +40,8 @@ export default function UserDashboard() {
   const [selectedProgressPhoto, setSelectedProgressPhoto] = useState(null);
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [selectedWorkoutDay, setSelectedWorkoutDay] = useState(null);
+  const [isWorkoutLogModalOpen, setIsWorkoutLogModalOpen] = useState(false);
+
 
   const categories = useMemo(() => ['breakfast', 'lunch', 'dinner', 'snack'], []);
   const days = useMemo(() => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], []);
@@ -303,6 +308,9 @@ export default function UserDashboard() {
       });
       const myData = await userRes.json();
       setUserData(myData);
+
+      await fetchUpdates();
+
     } catch (err) {
       console.error(err);
     }
@@ -322,8 +330,10 @@ export default function UserDashboard() {
 
   const updated = await res.json();
   setUserData(updated);
+  await fetchUpdates();
 };
 
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -359,9 +369,49 @@ export default function UserDashboard() {
     fetchData();
   }, [token]);
 
+  const fetchUpdates = async () => {
+    try {
+      const updateRes = await fetch('http://localhost:9000/updates/my', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updateData = await updateRes.json();
+      setUpdates(updateData);
+    } catch (err) {
+      console.error('Failed to fetch updates', err);
+    }
+  };
+
+  const handleSaveWorkoutLog = async (logData) => {
+    try {
+      const response = await fetch('http://localhost:9000/log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(logData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save workout log');
+      }
+
+      const result = await response.json();
+      console.log('Workout log saved:', result);
+      
+      // Refresh updates or any other data if needed
+      await fetchUpdates();
+      
+    } catch (error) {
+      console.error('Error saving workout log:', error);
+      throw error; // Re-throw so the modal can handle it
+    }
+  };
+
+
   // Handle modal overflow
   useEffect(() => {
-    if (selectedRecipe || isProgressModalOpen || isInputModalOpen) {
+    if (selectedRecipe || isProgressModalOpen || isInputModalOpen || isWorkoutLogModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -369,9 +419,10 @@ export default function UserDashboard() {
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [selectedRecipe, isProgressModalOpen, isInputModalOpen]);
+  }, [selectedRecipe, isProgressModalOpen, isInputModalOpen, isWorkoutLogModalOpen]);
 
   console.log(workouts);
+  
   return (
     <div style={containerStyle}>
       <div style={{display: 'flex'}}>
@@ -544,6 +595,7 @@ export default function UserDashboard() {
                 <input
                   id="add-metrics"
                   onClick={(e) => setIsInputModalOpen(true)}
+                  
                   style={{ display: 'none' }}
                 />
               </label>
@@ -561,6 +613,7 @@ export default function UserDashboard() {
               onClose={() => setIsInputModalOpen(false)}
               onSave={handleSaveMetrics}
             />
+            
           </div>
           <div>
             <div style={{height: 'auto'}}>
@@ -805,10 +858,22 @@ export default function UserDashboard() {
               <div style={{...cardStyle, height: '15.8125rem', width: 'auto'}}>
                 <span style={cardTitle}>Updates</span>
                 <hr></hr>
-                {(updates.message || []).map((message, index) => (
-                  <span key={index}>{message}</span>
-                ))}
-                <hr></hr>
+                <div style={{height: '200px', overflowY: 'scroll'}}>
+                  {updates.length > 0 ? (
+                    updates.map((update, index) => (
+                      <div key={update._id || index} style={{ marginBottom: '0.5rem' }}>
+                        <span>
+                          <strong>{update.userId?.firstName}</strong> {update.message}
+                        </span>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {new Date(update.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ fontStyle: 'italic', color: '#666' }}>No updates yet</p>
+                  )}
+                </div>      
               </div>
           </div>
           <div style={{...cardStyle, height: '43rem', width: '20rem'}}>
@@ -922,10 +987,7 @@ export default function UserDashboard() {
                 marginTop: '0.5rem',
                 transition: 'background-color 0.2s ease'
               }}
-              onClick={() => setSelectedWorkoutDay({
-                date: new Date(),
-                workouts: getTodaysWorkouts()
-              })}
+              onClick={(e) => setIsWorkoutLogModalOpen(true)}
               onMouseOver={(e) => {
                 e.currentTarget.style.backgroundColor = '#FF7F00';
               }}
@@ -935,6 +997,15 @@ export default function UserDashboard() {
             >
               Log Workout
             </button>
+
+            <WorkoutLogModal
+              isOpen={isWorkoutLogModalOpen}
+              onClose={() => setIsWorkoutLogModalOpen(false)}
+              onSubmit={handleSaveWorkoutLog}
+              workoutDataInput={getTodaysWorkouts()[0]}
+              scheduledDate={new Date().toISOString().split('T')[0]}
+            />
+            
           </div>
           {selectedWorkoutDay && (
             <WorkoutDayModal
@@ -967,6 +1038,8 @@ export default function UserDashboard() {
 const containerStyle = {
   padding: '1.5rem',
   margin: 'auto',
+  position: 'fixed'
+  
 };
 
 const cardStyle = {

@@ -195,7 +195,7 @@ router.post('/add-metrics', authenticateToken, async (req, res) => {
 
     await Update.create({
       userId: req.user.id,
-      type: 'metrics',
+      type: 'body_metric',
       message: 'Updated body metrics',
       data: { weight, sleep }
     });
@@ -290,7 +290,7 @@ router.patch('/:id', upload.single('profilePicture'), async (req, res) => {
 
     await Update.create({
       userId: req.params.id,
-      type: 'profilePicture',
+      type: 'profile_picture',
       message: 'Updated profile picture',
       data: { profilePicture: updateData.profilePicture }
     });
@@ -325,7 +325,7 @@ router.patch('/:id/progress-picture', uploadProgress.single('progressPicture'), 
 
       await Update.create({
         userId: req.params.id,
-        type: 'progressPicture',
+        type: 'progress_photo',
         message: 'Added a new progress picture',
         data: { progressPicture: newPath }
       });
