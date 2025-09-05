@@ -6,7 +6,6 @@ const updateSchema = new Schema({
   type: { type: String, enum: ['body_metric', 'progress_photo', 'log', 'pr'] },
   message: { type: String }, // human-readable message like "You added a new weight log"
   data: { type: Object },    // extra details if needed
- 
 },
 { timestamps: true });
 

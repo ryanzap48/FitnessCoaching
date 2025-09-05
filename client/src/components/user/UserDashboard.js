@@ -805,6 +805,10 @@ export default function UserDashboard() {
               <div style={{...cardStyle, height: '15.8125rem', width: 'auto'}}>
                 <span style={cardTitle}>Updates</span>
                 <hr></hr>
+                {(updates.message || []).map((message, index) => (
+                  <span key={index}>{message}</span>
+                ))}
+                <hr></hr>
               </div>
           </div>
           <div style={{...cardStyle, height: '43rem', width: '20rem'}}>
