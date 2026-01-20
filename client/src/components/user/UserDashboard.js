@@ -881,7 +881,7 @@ export default function UserDashboard() {
               <span style={cardTitle}>Today's Workout</span>
               {getTodaysWorkouts().length > 0 && (
                 <Link 
-                  to={`/workouts/${getTodaysWorkouts()[0]._id}`}
+                  to={`/workout/${getTodaysWorkouts()[0]._id}`}
                   style={{
                     color: '#4285f4',
                     textDecoration: 'none',
