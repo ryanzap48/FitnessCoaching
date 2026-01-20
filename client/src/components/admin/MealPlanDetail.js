@@ -640,10 +640,10 @@ const handleAddRecipeInputChange = (day, category, value) => {
                             )}
                         </h2>
                                                     
-                        <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: '15px', border: '3px dotted #ccc', borderRadius: '8px', padding: '5px 20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '15px', border: '3px dotted #ccc', borderRadius: '8px', padding: '5px 20px' }}>
                             {categories.map(category => (
                                 mealPlan.week[day]?.[category]?.length > 0 && (
-                                    <div key={`${day}-${category}`} style={{ flex: '1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                    <div key={`${day}-${category}`} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                                         <h3 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                                 {category.charAt(0).toUpperCase() + category.slice(1)}

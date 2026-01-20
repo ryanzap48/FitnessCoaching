@@ -59,9 +59,10 @@ export default function Home() {
     });
     
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill()); // Cleanup on unmount
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
   }, []);
+  
 
   return (
     <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: '#222' }}>
